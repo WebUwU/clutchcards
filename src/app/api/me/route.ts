@@ -17,7 +17,7 @@ export async function GET() {
         userId: u.userId,
         username: `${base}_${u.userId.slice(0, 4)}`.toLowerCase(),
         displayName: user?.name ?? "",
-        avatar: user?.image ?? "https://api.dicebear.com/7.x/bottts-neutral/svg?seed=clutch",
+        avatar: user?.image ?? "/images/avatars/avatar-001.png",
       },
     });
     await prisma.settings.upsert({ where: { userId: u.userId }, update: {}, create: { userId: u.userId, json: "{}" } });

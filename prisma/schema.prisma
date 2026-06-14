@@ -79,7 +79,7 @@ model Profile {
   username     String  @unique
   displayName  String  @default("")
   bio          String  @default("")
-  avatar       String  @default("https://api.dicebear.com/7.x/bottts-neutral/svg?seed=clutch")
+  avatar       String  @default("/images/avatars/avatar-001.png")
   region       String  @default("Europe")
   language     String  @default("English")
   timezone     String  @default("Europe/Vienna")

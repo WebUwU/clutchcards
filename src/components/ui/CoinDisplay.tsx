@@ -16,7 +16,7 @@ export function CoinDisplay({
   return (
     <span
       className={`inline-flex items-center gap-1.5 font-mono font-semibold ${text} ${
-        isPremium ? "text-rarity-legendary" : "text-tactical"
+        isPremium ? "text-tactical" : "text-rarity-legendary"
       }`}
       title={isPremium ? "Premium Coins" : "Free Coins"}
     >
