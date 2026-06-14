@@ -1,24 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isAdminLoggedIn } from "@/lib/adminAuth";
+import { useSession } from "next-auth/react";
 import { Loader2 } from "lucide-react";
 
-/** Client-side gate. Redirects to /admin/login when not authenticated. */
+// Session-based gate. Middleware already protects /admin server-side; this
+// provides a smooth client experience and redirects non-admins.
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [state, setState] = useState<"checking" | "allowed">("checking");
+  const { data: session, status } = useSession();
+  const role = (session?.user as { role?: string } | undefined)?.role;
 
   useEffect(() => {
-    if (isAdminLoggedIn()) {
-      setState("allowed");
-    } else {
-      router.replace("/admin/login");
-    }
-  }, [router]);
+    if (status === "unauthenticated") router.replace("/admin/login");
+    else if (status === "authenticated" && role !== "admin") router.replace("/dashboard");
+  }, [status, role, router]);
 
-  if (state === "checking") {
+  if (status === "loading" || status === "unauthenticated" || role !== "admin") {
     return (
       <div className="grid min-h-screen place-items-center">
         <Loader2 className="size-6 animate-spin text-slate-500" />

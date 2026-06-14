@@ -3,12 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
 import { navItems } from "./nav-items";
 import { cn } from "@/lib/utils";
 import { ShieldHalf } from "lucide-react";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
+  const loggedIn = status === "authenticated";
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
+  const items = navItems.filter((i) => !i.auth || loggedIn);
   return (
     <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-white/[0.06] bg-ink-900/50 px-3 py-5 backdrop-blur-xl lg:flex">
       <Link href="/" className="mb-8 flex items-center gap-2.5 px-2">
@@ -22,7 +27,7 @@ export function Sidebar() {
       </Link>
 
       <nav className="flex flex-1 flex-col gap-1">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {items.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link
@@ -49,9 +54,11 @@ export function Sidebar() {
       </nav>
 
       <div className="mt-auto space-y-3 px-2 pt-4">
-        <Link href="/admin" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-slate-500 transition-colors hover:text-slate-300">
-          <ShieldHalf className="size-3.5" /> Admin
-        </Link>
+        {isAdmin && (
+          <Link href="/admin" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-slate-500 transition-colors hover:text-slate-300">
+            <ShieldHalf className="size-3.5" /> Admin
+          </Link>
+        )}
         <p className="font-mono text-[10px] leading-relaxed text-slate-600">
           ASCENDANT CARDS · v2.0
           <br />

@@ -86,7 +86,7 @@ export function Navbar() {
         {open && (
           <motion.nav initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-white/[0.06] lg:hidden">
             <div className="grid grid-cols-2 gap-1 p-3">
-              {navItems.map(({ href, label, icon: Icon }) => {
+              {navItems.filter((i) => !i.auth || loggedIn).map(({ href, label, icon: Icon }) => {
                 const active = pathname === href;
                 return (
                   <Link key={href} href={href} onClick={() => setOpen(false)}

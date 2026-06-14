@@ -31,6 +31,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null;
         const { email, password } = parsed.data;
         const user = await prisma.user.findUnique({ where: { email } });
+        if (!user?.passwordHash || user.role !== "admin") return null;
+        const ok = await bcrypt.compare(password, user.passwordHash);
+        if (!ok) return null;
+        return { id: user.id, email: user.email, name: user.name, role: user.role };
+      },
+    }),
+    Credentials({
+      id: "user-credentials",
+      name: "Email",
+      credentials: { email: {}, password: {} },
+      async authorize(raw) {
+        const parsed = adminSchema.safeParse(raw);
+        if (!parsed.success) return null;
+        const { email, password } = parsed.data;
+        const user = await prisma.user.findUnique({ where: { email } });
         if (!user?.passwordHash) return null;
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;

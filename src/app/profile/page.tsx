@@ -7,6 +7,7 @@ import { SignInGate } from "@/components/layout/SignInGate";
 import { CardItem } from "@/components/cards/CardItem";
 import { XPBar } from "@/components/ui/XPBar";
 import { useGameData } from "@/components/providers/GameDataProvider";
+import { MatchSyncButton } from "@/components/valorant/MatchSyncButton";
 
 export default function ProfilePage() {
   const { profile, inventory, catalog } = useGameData();
@@ -41,6 +42,7 @@ export default function ProfilePage() {
                 </div>
                 {profile.bio && <p className="mt-1 text-sm text-slate-400">{profile.bio}</p>}
               </div>
+              <MatchSyncButton />
             </div>
             <div className="mt-4"><XPBar level={profile.level} xp={profile.xp} /></div>
           </div>
