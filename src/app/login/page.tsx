@@ -14,7 +14,11 @@ const REGIONS = [
 
 function AuthInner() {
   const params = useSearchParams();
-  const next = params.get("next") ?? "/dashboard";
+  const rawNext = params.get("next") ?? params.get("callbackUrl") ?? "/dashboard";
+  // Never bounce a normal user into an admin URL after login.
+  let safeNext = rawNext;
+  try { const u = new URL(rawNext, "http://x"); safeNext = u.pathname + u.search; } catch { safeNext = "/dashboard"; }
+  const next = safeNext.startsWith("/admin") ? "/dashboard" : safeNext;
   const [mode, setMode] = useState<"signin" | "register">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,9 +62,9 @@ function AuthInner() {
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 grid size-12 place-items-center rounded-2xl bg-ascend text-white shadow-glow">
-            <span className="font-display text-xl font-bold">A</span>
+            <span className="font-display text-xl font-bold">C</span>
           </div>
-          <h1 className="font-display text-2xl font-bold text-white">Ascendant Cards</h1>
+          <h1 className="font-display text-2xl font-bold text-white">ClutchCards</h1>
           <p className="mt-1 text-sm text-slate-400">{mode === "signin" ? "Welcome back" : "Create your account"}</p>
         </div>
 
@@ -109,10 +113,6 @@ function AuthInner() {
           <button onClick={mode === "signin" ? signin : register} disabled={busy} className="btn-primary w-full disabled:opacity-60">
             {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
           </button>
-        </div>
-
-        <div className="mt-4 text-center">
-          <Link href="/admin/login" className="text-[11px] text-slate-500 hover:text-slate-300">Admin sign in →</Link>
         </div>
       </div>
     </div>

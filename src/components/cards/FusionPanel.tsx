@@ -2,18 +2,12 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
-import { X, FlaskConical, ArrowRight, Coins } from "lucide-react";
+import { X, FlaskConical, ArrowRight, Sparkles } from "lucide-react";
 import type { Card } from "@/types";
-import { cards as allCards } from "@/data/cards";
-import { currentUser } from "@/data/user";
 import { CardItem } from "./CardItem";
-import { fusionCost } from "@/lib/economy";
+import { useGameData } from "@/components/providers/GameDataProvider";
 import { useToast } from "@/components/ui/Toast";
-import { formatNumber, rarityLabel, rarityOrder } from "@/lib/utils";
-
-
-// Duplicates = owned more than once and tradable/fusable.
-const fusable = allCards.filter((c) => c.ownedAmount > 1);
+import { rarityLabel, rarityOrder } from "@/lib/utils";
 
 const nextRarity: Record<string, string> = {
   common: "uncommon", uncommon: "rare", rare: "epic",
@@ -22,16 +16,24 @@ const nextRarity: Record<string, string> = {
 
 export function FusionPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const toast = useToast();
+  const { inventory } = useGameData();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const selectedCards = fusable.filter((c) => selected.has(c.id));
-  const cost = selectedCards.length >= 2 ? fusionCost(selectedCards.length) : 0;
-  const canAfford = currentUser.freeCoins >= cost;
+  // Real duplicates only — cards the user actually owns 2+ of.
+  const fusable = useMemo(
+    () => inventory
+      .filter((i) => i.amount > 1 && i.card.tradable)
+      .map((i) => ({ ...i.card, ownedAmount: i.amount } as Card)),
+    [inventory],
+  );
 
+  const selectedCards = fusable.filter((c) => selected.has(c.id));
   const resultRarity = useMemo<string | null>(() => {
     if (selectedCards.length < 2) return null;
-    const highest = selectedCards.reduce<string>((acc, c) =>
-      rarityOrder[c.rarity] > rarityOrder[acc] ? c.rarity : acc, "common");
+    const highest = selectedCards.reduce<string>((acc, c) => {
+      const rk = (c as { rarityId?: string }).rarityId ?? c.rarity;
+      return rarityOrder[rk] > rarityOrder[acc] ? rk : acc;
+    }, "common");
     return nextRarity[highest];
   }, [selectedCards]);
 
@@ -41,14 +43,6 @@ export function FusionPanel({ open, onClose }: { open: boolean; onClose: () => v
       next.has(card.id) ? next.delete(card.id) : next.add(card.id);
       return next;
     });
-  };
-
-  const fuse = () => {
-    if (selectedCards.length < 2) return toast("Select at least two duplicates.", "error");
-    if (!canAfford) return toast("Not enough Free Coins.", "error");
-    toast(`Fused ${selectedCards.length} cards into a ${resultRarity} card!`, "success");
-    setSelected(new Set());
-    onClose();
   };
 
   return (
@@ -68,6 +62,7 @@ export function FusionPanel({ open, onClose }: { open: boolean; onClose: () => v
               <div className="flex items-center gap-2">
                 <FlaskConical className="size-5 text-tactical" />
                 <h3 className="font-display text-lg font-bold text-white">Fusion Forge</h3>
+                <span className="chip bg-rarity-legendary/10 text-rarity-legendary ring-1 ring-rarity-legendary/30">Coming soon</span>
               </div>
               <button onClick={onClose} className="grid size-8 place-items-center rounded-lg border border-white/10 text-slate-400 hover:text-white">
                 <X className="size-4" />
@@ -75,13 +70,17 @@ export function FusionPanel({ open, onClose }: { open: boolean; onClose: () => v
             </div>
 
             <p className="mb-4 text-sm text-slate-400">
-              Combine duplicate cards into one of a higher rarity. Fusion costs Free Coins —
-              it never costs Premium Coins and never pays out real value.
+              Combine duplicate cards into one of a higher rarity. Fusion will cost Free Coins —
+              never Premium Coins, and never pays out real value.
             </p>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
               {fusable.length === 0 ? (
-                <p className="py-10 text-center text-sm text-slate-500">You have no duplicate cards to fuse yet.</p>
+                <div className="grid place-items-center py-12 text-center">
+                  <Sparkles className="size-7 text-slate-600" />
+                  <p className="mt-2 text-sm text-slate-400">You have no duplicate cards to fuse yet.</p>
+                  <p className="mt-0.5 text-xs text-slate-600">Open packs to collect duplicates.</p>
+                </div>
               ) : (
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
                   {fusable.map((c) => (
@@ -91,26 +90,22 @@ export function FusionPanel({ open, onClose }: { open: boolean; onClose: () => v
               )}
             </div>
 
-            {/* Summary */}
-            <div className="mt-4 flex flex-col gap-3 rounded-xl bg-ink-900/70 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3 text-sm">
-                <span className="font-mono text-slate-400">{selectedCards.length} selected</span>
-                {resultRarity && (
-                  <>
-                    <ArrowRight className="size-4 text-slate-600" />
-                    <span className="font-display font-semibold text-tactical">{rarityLabel[resultRarity]} card</span>
-                  </>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1 font-mono text-sm text-rarity-legendary">
-                  <Coins className="size-4" /> {formatNumber(cost)}
-                </span>
-                <button onClick={fuse} disabled={selectedCards.length < 2 || !canAfford} className="btn-cyan">
-                  Fuse
+            {fusable.length > 0 && (
+              <div className="mt-4 flex flex-col gap-3 rounded-xl bg-ink-900/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3 text-sm">
+                  <span className="font-mono text-slate-400">{selectedCards.length} selected</span>
+                  {resultRarity && (
+                    <>
+                      <ArrowRight className="size-4 text-slate-600" />
+                      <span className="font-display font-semibold text-tactical">{rarityLabel[resultRarity]} card</span>
+                    </>
+                  )}
+                </div>
+                <button onClick={() => toast("Fusion is coming soon!", "info")} disabled={selectedCards.length < 2} className="btn-cyan disabled:opacity-50">
+                  Fuse (soon)
                 </button>
               </div>
-            </div>
+            )}
           </motion.div>
         </motion.div>
       )}
