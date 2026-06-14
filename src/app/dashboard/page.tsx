@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Flame, Package, Swords, Store, Library, ArrowRight } from "lucide-react";
+import { Flame, Package, Swords, Store, Library, ArrowRight, Crown } from "lucide-react";
 import type { Quest } from "@/types";
 import { AppShell } from "@/components/layout/AppShell";
 import { SignInGate } from "@/components/layout/SignInGate";
@@ -101,6 +101,18 @@ export default function DashboardPage() {
               </Link>
             ))}
           </div>
+
+          {/* Founder teaser — retention/monetization prep (no payment) */}
+          <Link href="/shop" className="mt-4 flex items-center justify-between gap-3 overflow-hidden rounded-2xl border border-rarity-legendary/25 bg-gradient-to-r from-rarity-legendary/10 to-transparent p-4 transition-colors hover:border-rarity-legendary/40">
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 place-items-center rounded-xl bg-rarity-legendary/15 text-rarity-legendary"><Crown className="size-5" /></div>
+              <div>
+                <div className="font-display text-sm font-bold text-white">Become a Founder</div>
+                <div className="text-xs text-slate-400">Exclusive card, badge & frame for early supporters · coming soon</div>
+              </div>
+            </div>
+            <ArrowRight className="size-4 shrink-0 text-rarity-legendary" />
+          </Link>
 
           {activeQuests.length > 0 && (
             <>

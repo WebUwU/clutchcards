@@ -24,9 +24,9 @@ export function Navbar() {
         <div className="flex items-center gap-3 lg:hidden">
           <Link href="/" className="flex items-center gap-2">
             <div className="grid size-8 place-items-center rounded-lg bg-ascend text-white shadow-glow">
-              <span className="font-display text-base font-bold">A</span>
+              <span className="font-display text-base font-bold">C</span>
             </div>
-            <span className="font-display text-sm font-bold tracking-tight text-white">ASCENDANT</span>
+            <span className="font-display text-sm font-bold tracking-tight text-white">CLUTCHCARDS</span>
           </Link>
         </div>
 

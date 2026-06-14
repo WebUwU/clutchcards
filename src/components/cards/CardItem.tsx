@@ -20,7 +20,9 @@ export function CardItem({
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const owned = card.ownedAmount > 0;
-  const color = rarityColor[card.rarity];
+  const rarityKey = (card as { rarityId?: string }).rarityId ?? card.rarity;
+  const typeKey = (card as { typeId?: string }).typeId ?? card.type;
+  const color = rarityColor[rarityKey];
 
   return (
     <motion.button
@@ -33,7 +35,7 @@ export function CardItem({
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950",
         selected ? "ring-2 ring-tactical" : "border-white/[0.06]"
       )}
-      style={{ boxShadow: owned ? `0 0 0 1px ${color}22` : undefined }}
+      style={{ boxShadow: owned ? `0 0 0 1px ${color}33, 0 8px 30px -12px ${color}66` : undefined, ["--rc" as string]: color }}
     >
       {/* Art */}
       <div className="relative aspect-[3/4] w-full overflow-hidden">
@@ -81,10 +83,10 @@ export function CardItem({
 
         {/* name + rarity */}
         <div className="absolute inset-x-0 bottom-0 p-3">
-          <RarityBadge rarity={card.rarity} className="mb-1.5" />
+          <RarityBadge rarity={rarityKey} className="mb-1.5" />
           <h3 className="truncate font-display text-sm font-bold text-white">{card.name}</h3>
           <p className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-slate-400">
-            {card.type} · {card.role}
+            {typeKey} · {card.role}
           </p>
         </div>
 

@@ -18,11 +18,11 @@ export function Sidebar() {
     <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-white/[0.06] bg-ink-900/50 px-3 py-5 backdrop-blur-xl lg:flex">
       <Link href="/" className="mb-8 flex items-center gap-2.5 px-2">
         <div className="grid size-9 place-items-center rounded-lg bg-ascend text-white shadow-glow">
-          <span className="font-display text-lg font-bold">A</span>
+          <span className="font-display text-lg font-bold">C</span>
         </div>
         <div className="leading-none">
-          <div className="font-display text-base font-bold tracking-tight text-white">ASCENDANT</div>
-          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">Cards</div>
+          <div className="font-display text-base font-bold tracking-tight text-white">CLUTCHCARDS</div>
+          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-500">Collectibles</div>
         </div>
       </Link>
 
@@ -60,9 +60,9 @@ export function Sidebar() {
           </Link>
         )}
         <p className="font-mono text-[10px] leading-relaxed text-slate-600">
-          ASCENDANT CARDS · v2.0
+          CLUTCHCARDS
           <br />
-          Closed-economy demo build
+          Collect · Trade · Clutch
         </p>
       </div>
     </aside>

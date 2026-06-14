@@ -46,10 +46,10 @@ export function SellModal({
             </div>
 
             <div className="flex gap-4">
-              <div className="aspect-[3/4] w-24 shrink-0 overflow-hidden rounded-xl" style={{ background: gradientFor(card.id), boxShadow: `0 0 0 1px ${rarityColor[card.rarity]}44` }} />
+              <div className="aspect-[3/4] w-24 shrink-0 overflow-hidden rounded-xl" style={{ background: gradientFor(card.id), boxShadow: `0 0 0 1px ${rarityColor[(card as any).rarityId ?? card.rarity]}44` }} />
               <div className="min-w-0 flex-1">
                 <h4 className="font-display font-bold text-white">{card.name}</h4>
-                <p className="mt-0.5 font-mono text-[11px] uppercase tracking-wider text-slate-500">{card.type} · {card.role}</p>
+                <p className="mt-0.5 font-mono text-[11px] uppercase tracking-wider text-slate-500">{(card as any).typeId ?? card.type} · {card.role}</p>
                 <p className="mt-2 text-xs text-slate-400">Owned: ×{card.ownedAmount}</p>
               </div>
             </div>

@@ -91,7 +91,7 @@ export default function BattlepassPage() {
                 <p className="text-sm text-slate-400">1,000 Premium Coins · all premium rewards this season</p>
               </div>
             </div>
-            <button onClick={() => { setPremiumUnlocked(true); toast("Premium track unlocked (demo)", "success"); }} className="btn-cyan">Unlock</button>
+            <button onClick={() => { setPremiumUnlocked(true); toast("Premium track unlocked", "success"); }} className="btn-cyan">Unlock</button>
           </div>
         )}
       </SignInGate>

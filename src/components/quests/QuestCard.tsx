@@ -17,25 +17,32 @@ export function QuestCard({ quest, onClaim }: { quest: Quest; onClaim: (q: Quest
   const pct = Math.round((quest.progress / quest.goal) * 100);
   const completed = quest.status === "completed";
   const claimed = quest.status === "claimed";
+  const accent = completed ? "#1ce5d4" : claimed ? "#46d17a" : "#ff4655";
 
   return (
     <motion.div
       layout
       className={cn(
-        "panel flex flex-col gap-3 p-4 transition-opacity",
+        "card-surface flex flex-col gap-3 p-4 pl-5 transition-opacity",
         claimed && "opacity-60"
       )}
+      style={{ ["--rc" as string]: accent }}
     >
+      {/* mission accent rail */}
+      <div className="absolute inset-y-0 left-0 w-1" style={{ background: accent, boxShadow: `0 0 12px ${accent}` }} />
+
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="mb-1 flex items-center gap-2">
             <span className={cn("rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider", difficultyStyle[quest.difficulty])}>
               {quest.difficulty}
             </span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-slate-600">MSN-{quest.id.slice(-4)}</span>
           </div>
           <h3 className="truncate font-display text-sm font-bold text-white">{quest.title}</h3>
           <p className="mt-0.5 line-clamp-2 text-xs text-slate-400">{quest.description}</p>
         </div>
+        {completed && <span className="chip shrink-0 bg-tactical/10 text-tactical ring-1 ring-tactical/30">READY</span>}
       </div>
 
       <div>

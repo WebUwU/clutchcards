@@ -5,6 +5,7 @@ import type { ShopItem, ShopCategory } from "@/types";
 import { AppShell } from "@/components/layout/AppShell";
 import { ShopItemCard } from "@/components/shop/ShopItemCard";
 import { ExchangePanel } from "@/components/shop/ExchangePanel";
+import { SupporterSection } from "@/components/shop/SupporterSection";
 import { PurchaseSafetyNotice } from "@/components/shop/PurchaseSafetyNotice";
 import { CoinDisplay } from "@/components/ui/CoinDisplay";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -18,6 +19,7 @@ import { ShoppingBag } from "lucide-react";
 
 type Tab = { key: string; label: string; categories: ShopCategory[] };
 const TABS: Tab[] = [
+  { key: "founder", label: "Founder", categories: [] },
   { key: "coins", label: "Premium Coins", categories: ["premium_bundle"] },
   { key: "cosmetics", label: "Cosmetics", categories: ["cosmetic", "frame", "showcase"] },
   { key: "boosters", label: "Boosters", categories: ["booster", "season_pass"] },
@@ -28,7 +30,7 @@ const TABS: Tab[] = [
 export default function ShopPage() {
   const toast = useToast();
   const { profile, refreshProfile, setProfileLocal } = useGameData();
-  const [tab, setTab] = useState<string>("coins");
+  const [tab, setTab] = useState<string>("founder");
   const allItems = useMemo(() => resolveShopItems().filter((i) => i.isActive), []);
 
   const activeTab = TABS.find((t) => t.key === tab)!;
@@ -89,6 +91,8 @@ export default function ShopPage() {
 
       {!profile ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-48 animate-pulse rounded-2xl bg-ink-800/60" />)}</div>
+      ) : tab === "founder" ? (
+        <SupporterSection />
       ) : tab === "exchange" ? (
         <div className="max-w-xl"><ExchangePanel premiumCoins={profile.premiumCoins} onExchange={exchange} /></div>
       ) : items.length === 0 ? (

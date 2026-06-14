@@ -16,7 +16,7 @@ export function MarketListingCard({
 }) {
   const { card, price, sellerName, listedAt } = listing;
   const [imgFailed, setImgFailed] = useState(false);
-  const color = rarityColor[card.rarity];
+  const color = rarityColor[(card as any).rarityId ?? card.rarity];
 
   return (
     <motion.div whileHover={{ y: -3 }} className="panel overflow-hidden">
@@ -28,7 +28,7 @@ export function MarketListingCard({
           <div className="size-full" style={{ background: gradientFor(card.id) }} />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-ink-900 to-transparent" />
-        <div className="absolute left-2 top-2"><RarityBadge rarity={card.rarity} /></div>
+        <div className="absolute left-2 top-2"><RarityBadge rarity={(card as any).rarityId ?? card.rarity} /></div>
         <div className="absolute inset-x-0 bottom-0 p-3">
           <h3 className="truncate font-display text-sm font-bold text-white">{card.name}</h3>
         </div>

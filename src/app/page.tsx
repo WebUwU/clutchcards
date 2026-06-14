@@ -2,148 +2,125 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Store, Swords, Layers, Sparkles, ShieldCheck, Flame } from "lucide-react";
-import { cards } from "@/data/cards";
-import { quests } from "@/data/quests";
-import { CardItem } from "@/components/cards/CardItem";
-import { QuestCard } from "@/components/quests/QuestCard";
-import { ClosedEconomyNotice } from "@/components/layout/ClosedEconomyNotice";
+import { ArrowRight, Store, Swords, Layers, Package, ShieldCheck, Flame, Trophy, Gem, Crown, Zap } from "lucide-react";
+
+const features = [
+  { icon: Package, title: "Open Packs", desc: "Crack packs and pull cards across rarities — from Common to Mythic.", color: "#ff4655", href: "/packs" },
+  { icon: Swords, title: "Complete Quests", desc: "Link your Valorant account and earn rewards from real match performance.", color: "#1ce5d4", href: "/quests" },
+  { icon: Store, title: "Trade on the Market", desc: "Buy and sell tradable cards with other collectors on an open market.", color: "#3ea6ff", href: "/market" },
+  { icon: Layers, title: "Build Your Collection", desc: "Complete sets, track progress and climb the vault.", color: "#b15cff", href: "/collection" },
+];
+
+const steps = [
+  { n: "01", title: "Create your account", desc: "Sign up free and get 1,000 coins to start." },
+  { n: "02", title: "Open your first pack", desc: "Pull your starter cards and begin your collection." },
+  { n: "03", title: "Quest, trade, complete", desc: "Earn from matches, trade duplicates, finish sets." },
+];
 
 export default function LandingPage() {
-  const previewCards = cards.filter((c) => c.ownedAmount > 0).slice(0, 5);
-  const previewQuests = quests.slice(0, 2);
-
   return (
-    <div className="min-h-screen">
-      {/* Top bar */}
-      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-ink-950/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 lg:px-8">
-          <div className="flex items-center gap-2.5">
-            <div className="grid size-9 place-items-center rounded-lg bg-ascend text-white shadow-glow">
-              <span className="font-display text-lg font-bold">A</span>
-            </div>
-            <div className="font-display text-base font-bold tracking-tight text-white">ASCENDANT</div>
+    <div className="relative min-h-screen overflow-hidden bg-ink-950">
+      {/* ambient glows */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-32 left-1/4 size-[36rem] rounded-full bg-ascend/15 blur-[120px]" />
+        <div className="absolute top-1/3 -right-32 size-[32rem] rounded-full bg-tactical/10 blur-[120px]" />
+        <div className="absolute bottom-0 left-1/3 size-[28rem] rounded-full bg-rarity-epic/10 blur-[120px]" />
+      </div>
+
+      {/* nav */}
+      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-5 py-5">
+        <div className="flex items-center gap-2.5">
+          <div className="grid size-9 place-items-center rounded-xl bg-ascend text-white shadow-glow">
+            <span className="font-display text-lg font-bold">C</span>
           </div>
-          <Link href="/dashboard" className="btn-ghost text-sm">Enter App <ArrowRight className="size-4" /></Link>
+          <div className="leading-none">
+            <div className="font-display text-base font-bold tracking-tight text-white">CLUTCHCARDS</div>
+            <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-slate-500">Collect · Trade · Clutch</div>
+          </div>
         </div>
+        <Link href="/login" className="btn-ghost px-4 py-2 text-sm">Sign in</Link>
       </header>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-faint bg-[size:40px_40px] opacity-40" />
-        <div className="absolute left-1/2 top-0 size-[600px] -translate-x-1/2 rounded-full bg-ascend/10 blur-[120px]" />
-        <div className="relative mx-auto max-w-6xl px-4 py-20 lg:px-8 lg:py-28">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-            className="max-w-2xl"
-          >
-            <span className="eyebrow mb-4 flex items-center gap-2">
-              <Flame className="size-3.5 text-ascend" /> Tactical card collection
-            </span>
-            <h1 className="font-display text-5xl font-bold leading-[1.05] tracking-tight text-white lg:text-7xl">
-              Climb the ranks.
-              <br />
-              <span className="bg-gradient-to-r from-ascend to-ascend-bright bg-clip-text text-transparent">
-                Collect the legends.
-              </span>
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-400">
-              Complete quests, level up, and crack open packs of agent cards. Fuse your
-              duplicates into rarer pulls, then trade them on a player-run market — all
-              inside one closed, cash-free economy.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/collection" className="btn-primary">
-                Start Collecting <Sparkles className="size-4" />
-              </Link>
-              <Link href="/market" className="btn-ghost">
-                View Market <Store className="size-4" />
-              </Link>
-            </div>
-          </motion.div>
-        </div>
+      {/* hero */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16 pt-12 sm:pt-20">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-3xl">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-ascend/30 bg-ascend/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider text-ascend-bright">
+            <Flame className="size-3.5" /> Season · Act IV live now
+          </div>
+          <h1 className="font-display text-4xl font-bold leading-[1.05] text-white sm:text-6xl">
+            Collect. Trade.<br /><span className="bg-gradient-to-r from-ascend via-ascend-bright to-rarity-epic bg-clip-text text-transparent">Clutch.</span>
+          </h1>
+          <p className="mt-5 max-w-xl text-base text-slate-300 sm:text-lg">
+            Collect digital cards by completing Valorant-based quests, opening packs, and trading on the market. Build your collection and complete your legacy.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Link href="/login" className="btn-primary px-6 py-3 text-base">Start Collecting <ArrowRight className="size-4" /></Link>
+            <Link href="/packs" className="btn-cyan px-6 py-3 text-base"><Package className="size-4" /> Open Free Pack</Link>
+            <Link href="/market" className="btn-ghost px-6 py-3 text-base"><Store className="size-4" /> View Market</Link>
+          </div>
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500">
+            <span className="flex items-center gap-1.5"><ShieldCheck className="size-3.5 text-rarity-uncommon" /> Closed economy · no gambling</span>
+            <span className="flex items-center gap-1.5"><Gem className="size-3.5 text-rarity-legendary" /> 1,000 coins free to start</span>
+            <span className="flex items-center gap-1.5"><Zap className="size-3.5 text-tactical" /> Daily quests & packs</span>
+          </div>
+        </motion.div>
       </section>
 
-      {/* How it works */}
-      <section className="mx-auto max-w-6xl px-4 py-16 lg:px-8">
+      {/* feature cards */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { icon: Swords, title: "Run Quests", body: "Daily, weekly and seasonal objectives reward XP, Free Coins and packs." },
-            { icon: Layers, title: "Open Packs", body: "Every level grants a pack. Pull cards across six rarity tiers." },
-            { icon: Sparkles, title: "Fuse Cards", body: "Spend Free Coins to combine duplicates into something rarer." },
-            { icon: Store, title: "Trade", body: "List tradable cards on the community market for Premium Coins." },
-          ].map((f, i) => (
-            <motion.div
-              key={f.title}
-              initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
-              className="panel p-5"
-            >
-              <div className="mb-3 grid size-10 place-items-center rounded-xl bg-ascend/10 text-ascend ring-1 ring-ascend/20">
-                <f.icon className="size-5" />
-              </div>
-              <h3 className="font-display text-base font-bold text-white">{f.title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{f.body}</p>
+          {features.map((f, i) => (
+            <motion.div key={f.title} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07 }}>
+              <Link href={f.href} className="card-surface group block h-full p-5">
+                <div className="absolute -right-8 -top-8 size-24 rounded-full opacity-20 blur-2xl transition-opacity group-hover:opacity-40" style={{ background: f.color }} />
+                <div className="relative grid size-11 place-items-center rounded-xl" style={{ background: `${f.color}1a`, color: f.color }}>
+                  <f.icon className="size-5" />
+                </div>
+                <h3 className="relative mt-4 font-display text-lg font-bold text-white">{f.title}</h3>
+                <p className="relative mt-1.5 text-sm leading-relaxed text-slate-400">{f.desc}</p>
+              </Link>
             </motion.div>
           ))}
         </div>
       </section>
 
-      {/* Card preview */}
-      <section className="mx-auto max-w-6xl px-4 py-12 lg:px-8">
-        <div className="mb-6 flex items-end justify-between">
-          <div>
-            <span className="eyebrow">The collection</span>
-            <h2 className="mt-2 font-display text-3xl font-bold text-white">Featured cards</h2>
-          </div>
-          <Link href="/collection" className="hidden text-sm text-slate-400 hover:text-white sm:flex sm:items-center sm:gap-1">
-            See all <ArrowRight className="size-4" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {previewCards.map((c) => <CardItem key={c.id} card={c} />)}
+      {/* how it works */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-16">
+        <h2 className="mb-6 text-center font-display text-2xl font-bold text-white sm:text-3xl">Start in three steps</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {steps.map((s) => (
+            <div key={s.n} className="panel p-6">
+              <div className="font-display text-3xl font-bold text-ascend/40">{s.n}</div>
+              <h3 className="mt-2 font-display text-lg font-bold text-white">{s.title}</h3>
+              <p className="mt-1 text-sm text-slate-400">{s.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Quests + premium */}
-      <section className="mx-auto grid max-w-6xl gap-6 px-4 py-12 lg:grid-cols-2 lg:px-8">
-        <div>
-          <span className="eyebrow">Daily objectives</span>
-          <h2 className="mb-5 mt-2 font-display text-3xl font-bold text-white">Today&apos;s quests</h2>
-          <div className="space-y-3">
-            {previewQuests.map((q) => <QuestCard key={q.id} quest={q} onClaim={() => {}} />)}
-          </div>
-        </div>
-        <div>
-          <span className="eyebrow">Premium</span>
-          <h2 className="mb-5 mt-2 font-display text-3xl font-bold text-white">Premium Coins</h2>
-          <div className="panel space-y-4 p-6">
-            <p className="text-sm leading-relaxed text-slate-300">
-              Premium Coins power the community market and unlock cosmetics, frames and the
-              season pass. Buy them once, and they live in your account forever.
-            </p>
-            <div className="flex items-center gap-2 text-sm text-slate-300">
-              <ShieldCheck className="size-4 text-tactical" /> Convert Premium → Free Coins anytime
+      {/* founder teaser */}
+      <section className="relative z-10 mx-auto max-w-6xl px-5 pb-20">
+        <div className="relative overflow-hidden rounded-2xl border border-rarity-legendary/30 bg-gradient-to-br from-rarity-legendary/10 via-ink-900 to-ink-950 p-7 sm:p-9">
+          <div className="absolute -right-12 -top-12 size-48 rounded-full bg-rarity-legendary/20 blur-3xl" />
+          <div className="relative flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
+            <div>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-rarity-legendary/40 bg-rarity-legendary/10 px-2.5 py-1 font-mono text-[11px] uppercase tracking-wider text-rarity-legendary">
+                <Crown className="size-3.5" /> Coming soon
+              </div>
+              <h3 className="mt-3 font-display text-2xl font-bold text-white">Become a Founder</h3>
+              <p className="mt-1.5 max-w-md text-sm text-slate-300">
+                Early supporters get an exclusive Founder card, a profile frame, a Supporter badge and Founder status. Support the project as it grows.
+              </p>
             </div>
-            <ClosedEconomyNotice />
-            <Link href="/shop" className="btn-cyan w-full">Visit the Shop</Link>
+            <Link href="/shop" className="btn-founder shrink-0 px-6 py-3"><Trophy className="size-4" /> Learn more</Link>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-white/[0.06] py-10">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div className="flex items-center gap-2.5">
-            <div className="grid size-8 place-items-center rounded-lg bg-ascend text-white">
-              <span className="font-display text-sm font-bold">A</span>
-            </div>
-            <span className="font-display text-sm font-bold text-white">ASCENDANT CARDS</span>
-          </div>
-          <p className="max-w-md font-mono text-[11px] leading-relaxed text-slate-500">
-            A demo project. Not affiliated with Riot Games. No real-money cashout, no gift
-            cards, no crypto, no gambling. Premium Coins are a closed platform currency.
-          </p>
+      <footer className="relative z-10 border-t border-white/[0.06] py-8">
+        <div className="mx-auto max-w-6xl px-5 text-center">
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-slate-600">ClutchCards · Collect. Trade. Clutch.</p>
+          <p className="mt-2 text-xs text-slate-600">A closed-economy collectible game. Not affiliated with Riot Games. No real-money gambling.</p>
         </div>
       </footer>
     </div>

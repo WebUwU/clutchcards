@@ -14,9 +14,9 @@ const body = Inter({ subsets: ["latin"], variable: "--font-body" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
-  title: "Ascendant Cards — Collect. Craft. Trade.",
+  title: "ClutchCards — Collect. Trade. Clutch.",
   description:
-    "A tactical-shooter-inspired card collection platform. Complete quests, climb levels, open packs, fuse cards, and trade on a closed-economy community market.",
+    "Collect digital cards by completing Valorant-based quests, opening packs, and trading on the market. Build your collection and complete your legacy.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
