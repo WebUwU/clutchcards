@@ -1,17 +1,15 @@
-import { auth } from "@/lib/server/auth";
-import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/server/auth.config";
 
-export default auth((req) => {
-  const { pathname } = req.nextUrl;
-  const role = (req.auth?.user as { role?: string } | undefined)?.role;
-  const isLoggedIn = !!req.auth;
+// Edge-safe: this NextAuth instance uses ONLY the base config (no Prisma),
+// so the middleware bundle stays under the Edge size limit. The `authorized`
+// callback in auth.config.ts gates the /admin area.
+export const { auth: middleware } = NextAuth(authConfig);
 
-  // Admin area requires admin role.
-  if (pathname.startsWith("/admin")) {
-    if (!isLoggedIn) return NextResponse.redirect(new URL("/login?next=/admin", req.nextUrl));
-    if (role !== "admin") return NextResponse.redirect(new URL("/dashboard", req.nextUrl));
-  }
-  return NextResponse.next();
+export default middleware((req) => {
+  // The `authorized` callback already decides access; if it returned false
+  // for /admin, NextAuth redirects to the signIn page automatically.
+  return;
 });
 
 export const config = {

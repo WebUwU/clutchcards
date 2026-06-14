@@ -5,16 +5,18 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 import { z } from "zod";
+import { authConfig } from "./auth.config";
 
 const adminSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
 
+// Full config (Node runtime): base config + Prisma adapter + providers.
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
   providers: [
     Discord({
       clientId: process.env.DISCORD_CLIENT_ID ?? "",
@@ -37,28 +39,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    ...authConfig.callbacks,
+    // Override jwt to also refresh role from DB (Node-only).
     async jwt({ token, user }) {
       if (user) {
         token.role = (user as { role?: string }).role ?? "user";
         token.uid = user.id;
       } else if (token.uid) {
-        // Refresh role from DB so admin promotion takes effect.
         const db = await prisma.user.findUnique({ where: { id: token.uid as string } });
         if (db) token.role = db.role;
       }
       return token;
     },
-    async session({ session, token }) {
-      if (session.user) {
-        (session.user as { id?: string }).id = token.uid as string;
-        (session.user as { role?: string }).role = (token.role as string) ?? "user";
-      }
-      return session;
-    },
   },
   events: {
     async createUser({ user }) {
-      // Ensure every new OAuth user has a profile + settings row.
       if (!user.id) return;
       const username = (user.name || `player_${user.id.slice(0, 6)}`).replace(/\s+/g, "_");
       await prisma.profile.upsert({
