@@ -10,9 +10,8 @@ import { FusionPanel } from "@/components/cards/FusionPanel";
 import { CollectionStats } from "@/components/cards/CollectionStats";
 import { SetProgressCard } from "@/components/cards/SetProgressCard";
 import { CardDetailModal } from "@/components/cards/CardDetailModal";
-import { useLocalDb } from "@/hooks/useLocalDb";
-import { resolveCards, resolveCardSets, resolveRarities, resolveCardTypes } from "@/lib/registry";
-import { withOwnedAmounts, filterCards } from "@/lib/cards";
+import { useGameData } from "@/components/providers/GameDataProvider";
+import { filterCards } from "@/lib/cards";
 import { cn } from "@/lib/utils";
 
 const SORTS: { key: CardSortKey; label: string }[] = [
@@ -30,13 +29,14 @@ const VIEWS: { key: CardViewMode; icon: typeof LayoutGrid }[] = [
 ];
 
 export default function CollectionPage() {
-  const { loading, collection } = useLocalDb();
+  const { status, catalog, ownedMap } = useGameData();
+  const loading = !catalog;
   const [fusionOpen, setFusionOpen] = useState(false);
   const [detail, setDetail] = useState<Card | null>(null);
 
-  const rarities = useMemo(() => resolveRarities(), []);
-  const types = useMemo(() => resolveCardTypes(), []);
-  const sets = useMemo(() => resolveCardSets().filter((s) => s.isActive), []);
+  const rarities = useMemo(() => catalog?.rarities ?? [], [catalog]);
+  const types = useMemo(() => catalog?.types ?? [], [catalog]);
+  const sets = useMemo(() => (catalog?.sets ?? []).filter((s: any) => s.isActive), [catalog]);
 
   const [filters, setFilters] = useState<CardFilterState>({
     query: "", setId: "all", rarityId: "all", typeId: "all",
@@ -46,8 +46,8 @@ export default function CollectionPage() {
   const patch = (p: Partial<CardFilterState>) => setFilters((f) => ({ ...f, ...p }));
 
   const liveCards = useMemo(
-    () => withOwnedAmounts(resolveCards().filter((c) => c.isActive), collection),
-    [collection],
+    () => (catalog?.cards ?? []).map((c: any) => ({ ...c, ownedAmount: ownedMap[c.id] ?? 0 })) as Card[],
+    [catalog, ownedMap],
   );
   const filtered = useMemo(() => filterCards(liveCards, filters), [liveCards, filters]);
 

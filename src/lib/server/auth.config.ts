@@ -5,6 +5,7 @@ import type { NextAuthConfig } from "next-auth";
 // so it stays small enough to run in the Edge middleware. Providers and the
 // adapter that need Node are added in auth.ts, which runs in the Node runtime.
 export const authConfig = {
+  trustHost: true,
   pages: { signIn: "/login" },
   providers: [], // real providers are attached in auth.ts
   callbacks: {

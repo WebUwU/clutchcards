@@ -6,18 +6,29 @@ async function req<T>(url: string, options?: RequestInit): Promise<T> {
   return json.data as T;
 }
 
+export interface MeProfile {
+  id: string; username: string; displayName: string; bio: string; avatar: string;
+  region: string; language: string; timezone: string; favoriteRole: string; favoriteCategory: string;
+  level: number; xp: number; freeCoins: number; premiumCoins: number; dailyStreak: number;
+  isPublic: boolean; showcaseCardIds: string;
+}
+
 export const api = {
-  me: () => req<{ profile: Record<string, unknown>; valorant: unknown }>("/api/me"),
-  packs: () => req<unknown[]>("/api/packs"),
-  openPack: (packId: string) => req<{ cards: unknown[]; highestRarity: string }>("/api/packs/open", { method: "POST", body: JSON.stringify({ packId }) }),
-  inventory: () => req<unknown[]>("/api/inventory"),
-  market: () => req<unknown[]>("/api/market"),
+  me: () => req<{ profile: MeProfile; valorant: unknown }>("/api/me"),
+  catalog: () => req<{ cards: any[]; sets: any[]; rarities: any[]; types: any[] }>("/api/catalog"),
+  packs: () => req<any[]>("/api/packs"),
+  openPack: (packId: string) => req<{ cards: any[]; highestRarity: string }>("/api/packs/open", { method: "POST", body: JSON.stringify({ packId }) }),
+  inventory: () => req<any[]>("/api/inventory"),
+  market: () => req<any[]>("/api/market"),
   buy: (listingId: string) => req("/api/market/buy", { method: "POST", body: JSON.stringify({ listingId }) }),
   sell: (cardId: string, price: number) => req("/api/market/sell", { method: "POST", body: JSON.stringify({ cardId, price }) }),
   cancelListing: (listingId: string) => req("/api/market/cancel", { method: "POST", body: JSON.stringify({ listingId }) }),
-  exchange: (premiumAmount: number) => req("/api/exchange", { method: "POST", body: JSON.stringify({ premiumAmount }) }),
-  quests: () => req<unknown[]>("/api/quests"),
+  exchange: (premiumAmount: number) => req<{ freeCoins: number; premiumCoins: number; freeReceived: number }>("/api/exchange", { method: "POST", body: JSON.stringify({ premiumAmount }) }),
+  quests: () => req<any[]>("/api/quests"),
   claimQuest: (questId: string) => req("/api/quests/claim", { method: "POST", body: JSON.stringify({ questId }) }),
+  getSettings: () => req<Record<string, unknown>>("/api/settings"),
+  saveSettings: (settings: Record<string, unknown>) => req("/api/settings", { method: "PUT", body: JSON.stringify(settings) }),
+  updateProfile: (patch: Record<string, unknown>) => req<MeProfile>("/api/profile", { method: "PUT", body: JSON.stringify(patch) }),
   linkRiot: (riotName: string, riotTag: string, region: string) => req("/api/riot/link", { method: "POST", body: JSON.stringify({ riotName, riotTag, region }) }),
   syncMatches: () => req<{ added: number; total: number }>("/api/riot/sync", { method: "POST" }),
 };

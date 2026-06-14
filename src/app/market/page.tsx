@@ -2,49 +2,41 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, Store, Tag, Plus, Gem } from "lucide-react";
-import type { MarketListing, Card } from "@/types";
-import { marketListings as seedListings } from "@/data/market";
+import type { Card } from "@/types";
 import { AppShell } from "@/components/layout/AppShell";
+import { SignInGate } from "@/components/layout/SignInGate";
 import { MarketListingCard } from "@/components/market/MarketListingCard";
 import { SellModal } from "@/components/market/SellModal";
 import { SellInventoryPanel } from "@/components/market/SellInventoryPanel";
 import { MarketSafetyNotice } from "@/components/market/MarketSafetyNotice";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
-import { useLocalDb } from "@/hooks/useLocalDb";
-import { canBuyListing } from "@/lib/economy";
-import { getMarketListings, saveMarketListings, saveLocalUser } from "@/lib/localDb";
-import { resolveCards, resolveRarities, resolveEconomyConfig } from "@/lib/registry";
-import { withOwnedAmounts } from "@/lib/cards";
-import { calculateSellerReceives, calculateListingFee } from "@/lib/economy";
-import { rarityOrder, cn, formatNumber, uid } from "@/lib/utils";
+import { useGameData } from "@/components/providers/GameDataProvider";
+import { api } from "@/lib/apiClient";
+import { rarityOrder, cn, formatNumber } from "@/lib/utils";
 
 type Sort = "cheapest" | "newest" | "rarity";
+interface Listing { id: string; price: number; createdAt: string; sellerName: string; card: any; }
 
 export default function MarketPage() {
   const toast = useToast();
-  const { user, collection, updateUser } = useLocalDb();
-  const rarities = useMemo(() => resolveRarities(), []);
-  const [listings, setListings] = useState<MarketListing[]>([]);
+  const { profile, inventory, catalog, refreshProfile, refreshInventory } = useGameData();
+  const rarities = useMemo(() => catalog?.rarities ?? [], [catalog]);
+  const [listings, setListings] = useState<Listing[]>([]);
   const [query, setQuery] = useState("");
   const [rarity, setRarity] = useState<string | "all">("all");
   const [sort, setSort] = useState<Sort>("cheapest");
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const [sellCard, setSellCard] = useState<Card | null>(null);
 
-  // Hydrate listings from local DB (seed on first run).
-  useEffect(() => {
-    const stored = getMarketListings();
-    if (stored) setListings(stored);
-    else { setListings(seedListings); saveMarketListings(seedListings); }
-  }, []);
+  const loadListings = () => api.market().then((l) => setListings(l as Listing[])).catch(() => setListings([]));
+  useEffect(() => { loadListings(); }, []);
 
-  const persist = (next: MarketListing[]) => { setListings(next); saveMarketListings(next); };
-
-  const sellableDuplicates = useMemo(() => {
-    const live = withOwnedAmounts(resolveCards().filter((c) => c.isActive), collection);
-    return live.filter((c) => c.tradable && c.ownedAmount > 1);
-  }, [collection]);
+  // Sellable = tradable cards the user owns more than one of.
+  const sellableDuplicates = useMemo(
+    () => inventory.filter((i) => i.card.tradable && i.amount > 1).map((i) => ({ ...i.card, ownedAmount: i.amount } as Card)),
+    [inventory],
+  );
 
   const view = useMemo(() => {
     const list = listings
@@ -52,44 +44,45 @@ export default function MarketPage() {
       .filter((l) => l.card.name.toLowerCase().includes(query.toLowerCase()));
     list.sort((a, b) => {
       if (sort === "cheapest") return a.price - b.price;
-      if (sort === "newest") return +new Date(b.listedAt) - +new Date(a.listedAt);
+      if (sort === "newest") return +new Date(b.createdAt) - +new Date(a.createdAt);
       return rarityOrder[b.card.rarityId] - rarityOrder[a.card.rarityId];
     });
     return list;
   }, [listings, query, rarity, sort]);
 
-  const buy = (l: MarketListing) => {
-    if (!user) return;
-    if (l.sellerName === user.username) {
-      // Cancel own listing
-      persist(listings.filter((x) => x.id !== l.id));
-      toast(`Cancelled your listing of ${l.card.name}`, "info");
+  const buy = async (l: { id: string; sellerName: string; card: any }) => {
+    if (!profile) return;
+    if (l.sellerName === profile.username) {
+      try { await api.cancelListing(l.id); toast(`Cancelled your listing of ${l.card.name}`, "info"); await Promise.all([loadListings(), refreshInventory()]); }
+      catch (e) { toast(e instanceof Error ? e.message : "Cancel failed", "error"); }
       return;
     }
-    const gate = canBuyListing(user, l);
-    if (!gate.ok) return toast(gate.reason!, "error");
-    const nextUser = { ...user, premiumCoins: user.premiumCoins - l.price };
-    updateUser({ premiumCoins: nextUser.premiumCoins });
-    saveLocalUser(nextUser);
-    persist(listings.filter((x) => x.id !== l.id));
-    toast(`Purchased ${l.card.name} for ${l.price} Premium Coins`, "success");
+    try {
+      await api.buy(l.id);
+      toast(`Purchased ${l.card.name}`, "success");
+      await Promise.all([loadListings(), refreshProfile(), refreshInventory()]);
+    } catch (e) { toast(e instanceof Error ? e.message : "Purchase failed", "error"); }
   };
 
-  const listCard = (card: Card, price: number) => {
-    if (!user) return;
-    const cfg = resolveEconomyConfig();
-    const receives = Math.max(0, calculateSellerReceives(price, cfg) - calculateListingFee(cfg));
-    const newListing: MarketListing = {
-      id: uid("m"), card: { ...card, ownedAmount: 1 }, price,
-      sellerName: user.username, listedAt: new Date().toISOString(), ownListing: true,
-    };
-    persist([newListing, ...listings]);
-    setSellCard(null);
-    toast(`Listed ${card.name} — you'll receive ${receives} Premium Coins after fees`, "success");
+  const listCard = async (card: Card, price: number) => {
+    try {
+      await api.sell(card.id, price);
+      setSellCard(null);
+      toast(`Listed ${card.name}`, "success");
+      await Promise.all([loadListings(), refreshInventory()]);
+    } catch (e) { toast(e instanceof Error ? e.message : "Failed to list", "error"); }
   };
+
+  // Adapt server listing shape to the MarketListingCard's expected props.
+  const asCardListing = (l: Listing) => ({
+    id: l.id, price: l.price, sellerName: l.sellerName, listedAt: l.createdAt,
+    card: { ...l.card, ownedAmount: 1 },
+    ownListing: l.sellerName === profile?.username,
+  });
 
   return (
     <AppShell>
+      <SignInGate>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
           <span className="eyebrow">Community market</span>
@@ -97,7 +90,7 @@ export default function MarketPage() {
           <p className="mt-1 text-sm text-slate-400">Trade tradable cards with other players using Premium Coins.</p>
         </div>
         <div className="flex items-center gap-3">
-          {user && <span className="flex items-center gap-1.5 text-sm text-rarity-legendary"><Gem className="size-4" />{formatNumber(user.premiumCoins)}</span>}
+          {profile && <span className="flex items-center gap-1.5 text-sm text-rarity-legendary"><Gem className="size-4" />{formatNumber(profile.premiumCoins)}</span>}
           <button onClick={() => setInventoryOpen(true)} className="btn-primary"><Plus className="size-4" /> Sell a card</button>
         </div>
       </div>
@@ -119,20 +112,21 @@ export default function MarketPage() {
 
       <div className="mb-6 flex flex-wrap gap-2">
         <Chip active={rarity === "all"} onClick={() => setRarity("all")}>All</Chip>
-        {rarities.map((r) => <Chip key={r.id} active={rarity === r.id} onClick={() => setRarity(r.id)}>{r.name}</Chip>)}
+        {rarities.map((r: any) => <Chip key={r.id} active={rarity === r.id} onClick={() => setRarity(r.id)}>{r.name}</Chip>)}
       </div>
 
       {view.length === 0 ? (
         <EmptyState title="No listings found" hint="Try a different filter, or list one of your own cards." icon={<Store className="size-6" />} />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {view.map((l) => <MarketListingCard key={l.id} listing={l} onBuy={buy} />)}
+          {view.map((l) => <MarketListingCard key={l.id} listing={asCardListing(l)} onBuy={() => buy(l)} />)}
         </div>
       )}
 
       <SellInventoryPanel open={inventoryOpen} cards={sellableDuplicates}
         onPick={(c) => { setInventoryOpen(false); setSellCard(c); }} onClose={() => setInventoryOpen(false)} />
       <SellModal card={sellCard} open={!!sellCard} onClose={() => setSellCard(null)} onList={listCard} />
+      </SignInGate>
     </AppShell>
   );
 }
