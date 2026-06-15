@@ -40,9 +40,10 @@ interface HenrikMatch {
   teams?: { red: { has_won: boolean }; blue: { has_won: boolean } };
 }
 
-/** Recent matches for a name#tag/region. */
-export async function fetchRecentMatches(region: string, name: string, tag: string, userId: string | null): Promise<HenrikMatch[]> {
-  return call<HenrikMatch[]>(`/valorant/v3/matches/${region}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`, userId);
+/** Recent matches for a name#tag/region. `size` caps how many to pull. */
+export async function fetchRecentMatches(region: string, name: string, tag: string, userId: string | null, size = 5): Promise<HenrikMatch[]> {
+  const capped = Math.min(Math.max(size, 1), 20);
+  return call<HenrikMatch[]>(`/valorant/v3/matches/${region}/${encodeURIComponent(name)}/${encodeURIComponent(tag)}?size=${capped}`, userId);
 }
 
 /** Extract the row relevant to a given puuid from a raw match. */

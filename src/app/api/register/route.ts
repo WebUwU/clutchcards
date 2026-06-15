@@ -66,6 +66,15 @@ export async function POST(req: Request) {
       }
       return created;
     });
+
+    // Baseline pull for the freshly-linked Riot account (won't count for quests).
+    if (riotName && riotTag && region && verified && puuid) {
+      try {
+        const { syncMatchesForUser } = await import("@/lib/server/matchSync.server");
+        await syncMatchesForUser({ userId: user.id, riotName, riotTag, region, puuid }, { size: 5, countsForQuests: false });
+      } catch { /* best-effort, never block sign-up */ }
+    }
+
     return ok({ created: true, userId: user.id });
   } catch (e) {
     // Unique-constraint or any other DB error → clean message, no crash.

@@ -8,7 +8,7 @@ import { adjustBalance, grantCards, logAudit } from "./economy.server";
 
 // Compute a metric value for a user from their synced matches.
 async function metricValue(userId: string, quest: { metric: string; metricAgent: string | null; metricMap: string | null }): Promise<number> {
-  const matches = await prisma.syncedMatch.findMany({ where: { userId } });
+  const matches = await prisma.syncedMatch.findMany({ where: { userId, countsForQuests: true } });
   switch (quest.metric) {
     case "matches_played": return matches.length;
     case "matches_won": return matches.filter((m) => m.won).length;

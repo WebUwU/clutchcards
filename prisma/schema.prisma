@@ -339,6 +339,7 @@ model SyncedMatch {
   assists    Int     @default(0)
   headshots  Int     @default(0)
   playedAt   DateTime @default(now())
+  countsForQuests Boolean @default(true) // false = baseline match from before signup
   raw        String  @default("{}") // cached subset of match data
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([userId, matchId]) // prevent duplicate processing

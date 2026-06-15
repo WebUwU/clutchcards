@@ -44,5 +44,21 @@ export async function POST(req: Request) {
     create: { userId: u.userId, provider: "riot", externalId: puuid ?? `${riotName}#${riotTag}`, data: JSON.stringify({ region }) },
   });
   await logAudit(u.userId, "riot.link", account.id, { riotName, riotTag, region, verified });
+
+  // Baseline pull: store the last 5 matches as "before signup" so they never
+  // grant quest progress. Only meaningful when we could verify (have a key).
+  // Skipped if the user already has synced matches (re-link).
+  if (verified && puuid) {
+    try {
+      const already = await prisma.syncedMatch.count({ where: { userId: u.userId } });
+      if (already === 0) {
+        const { syncMatchesForUser } = await import("@/lib/server/matchSync.server");
+        await syncMatchesForUser({ userId: u.userId, riotName, riotTag, region, puuid }, { size: 5, countsForQuests: false });
+      }
+    } catch {
+      // Baseline is best-effort; never block linking on it.
+    }
+  }
+
   return ok({ riotName, riotTag, region, verified, puuid });
 }
