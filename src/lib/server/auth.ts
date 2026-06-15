@@ -8,7 +8,7 @@ import { z } from "zod";
 import { authConfig } from "./auth.config";
 
 const adminSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   password: z.string().min(1),
 });
 
@@ -16,7 +16,7 @@ const adminSchema = z.object({
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60, updateAge: 24 * 60 * 60 },
   providers: [
     Discord({
       clientId: process.env.DISCORD_CLIENT_ID ?? "",

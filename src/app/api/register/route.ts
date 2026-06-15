@@ -5,9 +5,9 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, "Letters, numbers and underscores only"),
+  username: z.string().trim().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, "Letters, numbers and underscores only"),
   riotName: z.string().max(32).optional().or(z.literal("")),
   riotTag: z.string().max(8).optional().or(z.literal("")),
   region: z.enum(["eu", "na", "ap", "kr", "latam", "br"]).optional(),
@@ -22,9 +22,10 @@ export async function POST(req: Request) {
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Invalid input");
   const { email, password, username, riotName, riotTag, region } = parsed.data;
 
-  // Uniqueness checks.
-  if (await prisma.user.findUnique({ where: { email } })) return fail("An account with this email already exists.");
-  if (await prisma.profile.findUnique({ where: { username } })) return fail("That username is taken.");
+  // Uniqueness checks (email is already lowercased + trimmed by the schema,
+  // so Test@x.com and test@x.com count as the same account).
+  if (await prisma.user.findUnique({ where: { email } })) return fail("An account with this email already exists. Try signing in instead.");
+  if (await prisma.profile.findUnique({ where: { username } })) return fail("That username is taken — please pick another.");
 
   const passwordHash = await bcrypt.hash(password, 10);
 
