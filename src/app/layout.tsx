@@ -3,6 +3,7 @@ import { Chakra_Petch, Inter, JetBrains_Mono } from "next/font/google";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AuthSessionProvider } from "@/components/providers/SessionProvider";
 import { GameDataProvider } from "@/components/providers/GameDataProvider";
+import { SettingsEffects } from "@/components/providers/SettingsEffects";
 import "./globals.css";
 
 const display = Chakra_Petch({
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AuthSessionProvider>
           <GameDataProvider>
+            <SettingsEffects />
             <ToastProvider>{children}</ToastProvider>
           </GameDataProvider>
         </AuthSessionProvider>

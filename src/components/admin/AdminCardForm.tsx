@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Card, CardSet, RarityConfig, CardTypeConfig, CardRole } from "@/types";
 import { AdminFormDrawer } from "./AdminFormDrawer";
 import { Field, TextInput, NumberInput, TextArea, Select, Toggle } from "./fields";
+import { ImageUploader } from "@/components/ui/ImageUploader";
 import { slugify, uid } from "@/lib/utils";
 
 const ROLES: CardRole[] = ["duelist", "controller", "sentinel", "initiator", "neutral"];
@@ -62,8 +63,12 @@ export function AdminCardForm({
         <Select value={card.role} onChange={(v) => set("role", v as CardRole)} options={ROLES.map((r) => ({ value: r, label: r }))} />
       </Field>
       <Field label="Description"><TextArea value={card.description} onChange={(v) => set("description", v)} /></Field>
-      <Field label="Image path" hint="e.g. /images/cards/card-021.png — missing images fall back to a gradient">
-        <TextInput value={card.image} onChange={(v) => set("image", v)} />
+      <Field label="Card image" hint="Drag & drop an image, or paste a URL below">
+        <ImageUploader value={card.image?.startsWith("http") ? card.image : ""} shape="wide" label="Upload card art"
+          onUploaded={(url) => set("image", url)} />
+        <div className="mt-2">
+          <TextInput value={card.image} onChange={(v) => set("image", v)} placeholder="https://… or /images/cards/…" />
+        </div>
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Fusion value"><NumberInput value={card.fusionValue} onChange={(v) => set("fusionValue", v)} min={0} /></Field>

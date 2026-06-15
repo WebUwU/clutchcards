@@ -31,4 +31,9 @@ export const api = {
   updateProfile: (patch: Record<string, unknown>) => req<MeProfile>("/api/profile", { method: "PUT", body: JSON.stringify(patch) }),
   linkRiot: (riotName: string, riotTag: string, region: string) => req("/api/riot/link", { method: "POST", body: JSON.stringify({ riotName, riotTag, region }) }),
   syncMatches: () => req<{ added: number; total: number }>("/api/riot/sync", { method: "POST" }),
+  // Admin CRUD (entity = cards | sets | rarities | types | packs | quests)
+  adminList: (entity: string) => req<any[]>(`/api/admin/${entity}`),
+  adminSave: (entity: string, data: Record<string, unknown>) => req<any>(`/api/admin/${entity}`, { method: "POST", body: JSON.stringify(data) }),
+  adminDelete: (entity: string, id: string) => req(`/api/admin/${entity}?id=${encodeURIComponent(id)}`, { method: "DELETE" }),
+  adminAudit: () => req<any[]>("/api/admin/audit"),
 };

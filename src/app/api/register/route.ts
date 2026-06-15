@@ -36,22 +36,41 @@ export async function POST(req: Request) {
     catch { /* store unverified rather than block sign-up */ }
   }
 
-  const user = await prisma.user.create({
-    data: {
-      email, passwordHash, name: username, role: "user",
-      profile: { create: { username, displayName: username, freeCoins: 1000, premiumCoins: 0 } },
-      settings: { create: { json: "{}" } },
-    },
-  });
-
+  // If a Riot account is given, make sure it isn't already linked elsewhere
+  // BEFORE creating the user, so we never leave a half-created account.
   if (riotName && riotTag && region) {
-    await prisma.valorantAccount.create({
-      data: { userId: user.id, riotName, riotTag, region, puuid, verified },
+    const existingRiot = await prisma.valorantAccount.findUnique({
+      where: { riotName_riotTag_region: { riotName, riotTag, region } },
     });
-    await prisma.linkedAccount.create({
-      data: { userId: user.id, provider: "riot", externalId: puuid ?? `${riotName}#${riotTag}`, data: JSON.stringify({ region }) },
-    });
+    if (existingRiot) return fail("That Riot account is already linked to another player. You can leave it blank and link it later in Settings.");
   }
 
-  return ok({ created: true });
+  // Create everything atomically — either the whole account succeeds or nothing.
+  try {
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          email, passwordHash, name: username, role: "user",
+          profile: { create: { username, displayName: username, freeCoins: 1000, premiumCoins: 0 } },
+          settings: { create: { json: "{}" } },
+        },
+      });
+      if (riotName && riotTag && region) {
+        await tx.valorantAccount.create({
+          data: { userId: created.id, riotName, riotTag, region, puuid, verified },
+        });
+        await tx.linkedAccount.create({
+          data: { userId: created.id, provider: "riot", externalId: puuid ?? `${riotName}#${riotTag}`, data: JSON.stringify({ region }) },
+        });
+      }
+      return created;
+    });
+    return ok({ created: true, userId: user.id });
+  } catch (e) {
+    // Unique-constraint or any other DB error → clean message, no crash.
+    const msg = e instanceof Error && e.message.includes("Unique constraint")
+      ? "That email, username or Riot account is already taken."
+      : "Could not create your account. Please try again.";
+    return fail(msg);
+  }
 }

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Search, Library, FlaskConical, X, LayoutGrid, Rows3, List } from "lucide-react";
 import type { Card, CardFilterState, CardSortKey, CardViewMode } from "@/types";
 import { AppShell } from "@/components/layout/AppShell";
+import { SignInGate } from "@/components/layout/SignInGate";
 import { CardGrid } from "@/components/cards/CardGrid";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FusionPanel } from "@/components/cards/FusionPanel";
@@ -58,6 +59,7 @@ export default function CollectionPage() {
 
   return (
     <AppShell>
+      <SignInGate>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <span className="eyebrow">Your cards</span>
@@ -149,6 +151,7 @@ export default function CollectionPage() {
 
       <FusionPanel open={fusionOpen} onClose={() => setFusionOpen(false)} />
       <CardDetailModal card={detail} onClose={() => setDetail(null)} />
+      </SignInGate>
     </AppShell>
   );
 }

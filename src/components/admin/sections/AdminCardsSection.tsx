@@ -1,13 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Card } from "@/types";
 import { AdminTable, Column, StatusPill } from "../AdminTable";
 import { AdminCardForm } from "../AdminCardForm";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { RarityBadge } from "@/components/ui/RarityBadge";
-import { resolveCards, resolveCardSets, resolveRarities, resolveCardTypes } from "@/lib/registry";
-import { createCard, updateCard, deleteCard } from "@/lib/cards";
+import { api } from "@/lib/apiClient";
 import { uid } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 
@@ -25,40 +24,58 @@ export function SectionHeader({ title, count, desc }: { title: string; count?: n
 
 export function AdminCardsSection({ onChanged }: { onChanged: () => void }) {
   const toast = useToast();
-  const [version, setVersion] = useState(0);
-  const cards = useMemo(() => resolveCards(), [version]);
-  const sets = useMemo(() => resolveCardSets(), [version]);
-  const rarities = useMemo(() => resolveRarities(), [version]);
-  const types = useMemo(() => resolveCardTypes(), [version]);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [sets, setSets] = useState<any[]>([]);
+  const [rarities, setRarities] = useState<any[]>([]);
+  const [types, setTypes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Card | null>(null);
   const [toDelete, setToDelete] = useState<Card | null>(null);
 
-  const bump = () => { setVersion((v) => v + 1); onChanged(); };
+  const load = async () => {
+    try {
+      const [c, s, r, t] = await Promise.all([
+        api.adminList("cards"), api.adminList("sets"), api.adminList("rarities"), api.adminList("types"),
+      ]);
+      setCards(c as Card[]); setSets(s); setRarities(r); setTypes(t);
+    } catch (e) { toast(e instanceof Error ? e.message : "Failed to load", "error"); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
 
-  const onSave = (card: Card) => {
-    const exists = cards.some((c) => c.id === card.id);
-    if (exists) { updateCard(card.id, card); toast(`Updated ${card.name}`, "success"); }
-    else { createCard(card); toast(`Created ${card.name}`, "success"); }
-    setFormOpen(false); setEditing(null); bump();
+  const bump = () => { load(); onChanged(); };
+
+  const onSave = async (card: Card) => {
+    try {
+      await api.adminSave("cards", card as any);
+      toast(`Saved ${card.name}`, "success");
+      setFormOpen(false); setEditing(null); bump();
+    } catch (e) { toast(e instanceof Error ? e.message : "Save failed", "error"); }
   };
 
-  const duplicate = (card: Card) => {
-    createCard({ ...card, id: uid("card"), name: `${card.name} (copy)`, slug: "" });
-    toast(`Duplicated ${card.name}`, "success"); bump();
+  const duplicate = async (card: Card) => {
+    try {
+      await api.adminSave("cards", { ...card, id: uid("card"), name: `${card.name} (copy)`, slug: `${card.slug}-copy-${Date.now().toString(36)}` } as any);
+      toast(`Duplicated ${card.name}`, "success"); bump();
+    } catch (e) { toast(e instanceof Error ? e.message : "Duplicate failed", "error"); }
   };
 
-  const toggle = (card: Card) => {
-    updateCard(card.id, { isActive: !card.isActive });
-    toast(`${card.isActive ? "Disabled" : "Enabled"} ${card.name}`, "info"); bump();
+  const toggle = async (card: Card) => {
+    try {
+      await api.adminSave("cards", { ...card, isActive: !card.isActive } as any);
+      toast(`${card.isActive ? "Disabled" : "Enabled"} ${card.name}`, "info"); bump();
+    } catch (e) { toast(e instanceof Error ? e.message : "Toggle failed", "error"); }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!toDelete) return;
-    deleteCard(toDelete.id);
-    toast(`Deleted ${toDelete.name}`, "success");
-    setToDelete(null); bump();
+    try {
+      await api.adminDelete("cards", toDelete.id);
+      toast(`Deleted ${toDelete.name}`, "success");
+      setToDelete(null); bump();
+    } catch (e) { toast(e instanceof Error ? e.message : "Delete failed", "error"); }
   };
 
   const columns: Column<Card>[] = [

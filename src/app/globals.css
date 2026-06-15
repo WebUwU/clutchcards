@@ -97,3 +97,34 @@
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ─── User appearance settings (applied via data-attrs on <html>) ─── */
+
+/* Accent theming: override the ascend accent per theme. We re-tint the
+   most visible accent surfaces (buttons, glows, active states). */
+:root { --accent: #ff4655; --accent-bright: #ff6b76; }
+html[data-theme="dark"]     { --accent: #3ea6ff; --accent-bright: #6cc0ff; }
+html[data-theme="dark-red"] { --accent: #ff4655; --accent-bright: #ff6b76; }
+html[data-theme="neon"]     { --accent: #1ce5d4; --accent-bright: #5defae; }
+html[data-theme="minimal"]  { --accent: #9aa4b2; --accent-bright: #c2cad6; }
+
+/* Apply the accent to the primary button + brand bits so theme changes are
+   visible immediately. */
+html[data-theme] .btn-primary { background-color: var(--accent); }
+html[data-theme] .btn-primary:hover { background-color: var(--accent-bright); }
+html[data-theme] .shadow-glow { box-shadow: 0 0 24px -6px var(--accent); }
+
+/* Reduce motion: kill animations/transitions globally. */
+html[data-reduce-motion="true"] * {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Rarity glow toggle off. */
+html[data-rarity-glow="false"] .rarity-ring { box-shadow: none !important; }
+
+/* Grid density affects collection/card grids that opt in via .density-grid. */
+html[data-density="compact"]  .density-grid { gap: 0.5rem; }
+html[data-density="large"]    .density-grid { gap: 1.25rem; }

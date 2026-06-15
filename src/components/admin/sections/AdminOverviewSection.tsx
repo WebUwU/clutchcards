@@ -1,24 +1,22 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { SectionHeader, } from "./AdminCardsSection";
 import { AdminTabKey } from "../admin-tabs";
-import {
-  resolveCards, resolveCardSets, resolvePacks, resolveQuests,
-  resolveShopItems, resolveRarities, resolveCardTypes,
-} from "@/lib/registry";
+import { api } from "@/lib/apiClient";
 import { Layers, Boxes, Package, Swords, ShoppingBag, Gem, Shapes, ArrowRight } from "lucide-react";
 
 export function AdminOverviewSection({ go }: { go: (key: AdminTabKey) => void }) {
-  const counts = useMemo(() => ({
-    cards: resolveCards().length,
-    sets: resolveCardSets().length,
-    packs: resolvePacks().length,
-    quests: resolveQuests().length,
-    shop: resolveShopItems().length,
-    rarities: resolveRarities().length,
-    types: resolveCardTypes().length,
-  }), []);
+  const [counts, setCounts] = useState({ cards: 0, sets: 0, packs: 0, quests: 0, shop: 0, rarities: 0, types: 0 });
+
+  useEffect(() => {
+    Promise.all([
+      api.adminList("cards"), api.adminList("sets"), api.adminList("packs"),
+      api.adminList("quests"), api.adminList("rarities"), api.adminList("types"),
+    ]).then(([c, s, p, q, r, t]) => {
+      setCounts({ cards: c.length, sets: s.length, packs: p.length, quests: q.length, shop: 0, rarities: r.length, types: t.length });
+    }).catch(() => {});
+  }, []);
 
   const tiles: { key: AdminTabKey; label: string; value: number; icon: typeof Layers }[] = [
     { key: "cards", label: "Cards", value: counts.cards, icon: Layers },

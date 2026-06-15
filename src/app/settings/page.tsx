@@ -11,6 +11,7 @@ import { useGameData } from "@/components/providers/GameDataProvider";
 import { api } from "@/lib/apiClient";
 import { useToast } from "@/components/ui/Toast";
 import { defaultUserSettings } from "@/data/user";
+import { ImageUploader } from "@/components/ui/ImageUploader";
 import type { UserSettings, ThemeName, GridDensity, CardRole } from "@/types";
 import { User as UserIcon, Shield, Bell, Palette, Lock, Link2, ShieldCheck, Save } from "lucide-react";
 
@@ -25,7 +26,17 @@ export default function SettingsPage() {
   // Load saved settings JSON from the server (merged onto defaults).
   useEffect(() => {
     api.getSettings().then((s) => {
-      if (s && Object.keys(s).length) setSettings((prev) => ({ ...prev, ...(s as Partial<UserSettings>) }));
+      if (s && Object.keys(s).length) {
+        const merged = { ...defaultUserSettings, ...(s as Partial<UserSettings>) } as UserSettings;
+        setSettings(merged);
+        if (merged.appearance) {
+          const root = document.documentElement;
+          root.setAttribute("data-theme", merged.appearance.theme);
+          root.setAttribute("data-reduce-motion", merged.appearance.reduceMotion ? "true" : "false");
+          root.setAttribute("data-density", merged.appearance.gridDensity);
+          root.setAttribute("data-rarity-glow", merged.appearance.showRarityGlow ? "true" : "false");
+        }
+      }
     }).catch(() => {});
   }, []);
 
@@ -40,7 +51,18 @@ export default function SettingsPage() {
   };
   const setPrivacy = (p: Partial<UserSettings["privacy"]>) => persistSettings({ ...settings, privacy: { ...settings.privacy, ...p } });
   const setNotif = (p: Partial<UserSettings["notifications"]>) => persistSettings({ ...settings, notifications: { ...settings.notifications, ...p } });
-  const setAppear = (p: Partial<UserSettings["appearance"]>) => persistSettings({ ...settings, appearance: { ...settings.appearance, ...p } });
+  const applyAppearance = (a: UserSettings["appearance"]) => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", a.theme);
+    root.setAttribute("data-reduce-motion", a.reduceMotion ? "true" : "false");
+    root.setAttribute("data-density", a.gridDensity);
+    root.setAttribute("data-rarity-glow", a.showRarityGlow ? "true" : "false");
+  };
+  const setAppear = (p: Partial<UserSettings["appearance"]>) => {
+    const nextAppearance = { ...settings.appearance, ...p };
+    applyAppearance(nextAppearance); // live, instant feedback
+    persistSettings({ ...settings, appearance: nextAppearance });
+  };
   const setSafety = (p: Partial<UserSettings["safety"]>) => persistSettings({ ...settings, safety: { ...settings.safety, ...p } });
 
   return (
@@ -66,6 +88,11 @@ export default function SettingsPage() {
               <SettingsTextField label="Timezone" value={profile.timezone} onChange={(v) => saveProfile({ timezone: v })} />
               <div className="pt-1">
                 <div className="px-3 font-mono text-[11px] uppercase tracking-wider text-slate-500">Avatar</div>
+                <div className="px-3 pt-2">
+                  <ImageUploader value={profile.avatar} shape="circle" label="Upload your own"
+                    onUploaded={(url) => saveProfile({ avatar: url || "https://api.dicebear.com/7.x/bottts-neutral/svg?seed=clutch" })} />
+                </div>
+                <div className="px-3 pt-3 font-mono text-[10px] uppercase tracking-wider text-slate-600">Or pick one</div>
                 <AvatarPicker value={profile.avatar} onChange={(v) => saveProfile({ avatar: v })} />
               </div>
             </SettingsSection>

@@ -1,31 +1,44 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Quest, QuestPeriod, QuestDifficulty } from "@/types";
 import { AdminTable, Column, StatusPill } from "../AdminTable";
 import { AdminFormDrawer } from "../AdminFormDrawer";
 import { Field, TextInput, NumberInput, TextArea, Select, Toggle } from "../fields";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { SectionHeader } from "./AdminCardsSection";
-import { resolveQuests, resolvePacks } from "@/lib/registry";
-import { getAdminQuests, saveAdminQuests } from "@/lib/localDb";
+import { api } from "@/lib/apiClient";
 import { uid } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 
 const PERIODS: QuestPeriod[] = ["daily", "weekly", "seasonal"];
 const DIFFS: QuestDifficulty[] = ["easy", "medium", "hard"];
 
+// Adapt a DB quest row to the form's Quest shape.
+function fromDb(q: any): Quest {
+  return {
+    ...q, type: q.period, progress: 0, progressRequired: q.goal, status: "not_started",
+    reward: { xp: q.rewardXp, freeCoins: q.rewardFreeCoins, packId: q.rewardPackId ?? undefined },
+  };
+}
+
 export function AdminQuestsSection({ onChanged }: { onChanged: () => void }) {
   const toast = useToast();
-  const [v, setV] = useState(0);
-  const quests = useMemo(() => resolveQuests(), [v]);
-  const packs = useMemo(() => resolvePacks(), [v]);
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [packs, setPacks] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Quest | null>(null);
   const [editing, setEditing] = useState(false);
   const [toDelete, setToDelete] = useState<Quest | null>(null);
-  const overlay = () => getAdminQuests() ?? [];
-  const bump = () => { setV((x) => x + 1); onChanged(); };
+
+  const load = async () => {
+    try {
+      const [q, p] = await Promise.all([api.adminList("quests"), api.adminList("packs")]);
+      setQuests((q as any[]).map(fromDb)); setPacks(p);
+    } catch (e) { toast(e instanceof Error ? e.message : "Failed to load", "error"); }
+  };
+  useEffect(() => { load(); }, []);
+  const bump = () => { load(); onChanged(); };
 
   const startNew = () => {
     setEditing(false);
@@ -38,25 +51,30 @@ export function AdminQuestsSection({ onChanged }: { onChanged: () => void }) {
   };
   const startEdit = (q: Quest) => { setEditing(true); setDraft({ ...q }); setOpen(true); };
 
-  const save = () => {
+  const save = async () => {
     if (!draft) return;
-    const final: Quest = {
-      ...draft, type: draft.period, progressRequired: draft.goal,
-      rewardXp: draft.reward.xp, rewardFreeCoins: draft.reward.freeCoins,
-      reward: { ...draft.reward, xp: draft.reward.xp, freeCoins: draft.reward.freeCoins, packId: draft.rewardPackId },
+    // Map the form back to DB columns. Keep metric/goal sensible.
+    const payload = {
+      id: draft.id, title: draft.title, description: draft.description,
+      period: draft.period, difficulty: draft.difficulty,
+      metric: (draft as any).metric ?? "matches_played",
+      goal: draft.goal, rewardXp: draft.reward.xp, rewardFreeCoins: draft.reward.freeCoins,
+      rewardPackId: draft.rewardPackId ?? null, isActive: draft.isActive,
     };
-    saveAdminQuests([...overlay().filter((q) => q.id !== final.id), final]);
-    toast(editing ? `Updated quest` : `Created quest`, "success");
-    setOpen(false); setDraft(null); bump();
+    try {
+      await api.adminSave("quests", payload);
+      toast(editing ? "Updated quest" : "Created quest", "success");
+      setOpen(false); setDraft(null); bump();
+    } catch (e) { toast(e instanceof Error ? e.message : "Save failed", "error"); }
   };
-  const toggle = (q: Quest) => { saveAdminQuests([...overlay().filter((x) => x.id !== q.id), { ...q, isActive: !q.isActive }]); bump(); };
-  const confirmDelete = () => {
+  const toggle = async (q: Quest) => {
+    try { await api.adminSave("quests", { ...q, metric: (q as any).metric ?? "matches_played", rewardXp: q.reward.xp, rewardFreeCoins: q.reward.freeCoins, isActive: !q.isActive }); bump(); }
+    catch (e) { toast(e instanceof Error ? e.message : "Toggle failed", "error"); }
+  };
+  const confirmDelete = async () => {
     if (!toDelete) return;
-    const isAdmin = overlay().some((q) => q.id === toDelete.id);
-    if (isAdmin) saveAdminQuests(overlay().filter((q) => q.id !== toDelete.id));
-    else saveAdminQuests([...overlay(), { ...toDelete, isActive: false }]);
-    toast("Deleted quest", "success");
-    setToDelete(null); bump();
+    try { await api.adminDelete("quests", toDelete.id); toast("Deleted quest", "success"); setToDelete(null); bump(); }
+    catch (e) { toast(e instanceof Error ? e.message : "Delete failed", "error"); }
   };
   const set = <K extends keyof Quest>(k: K, val: Quest[K]) => setDraft((d) => (d ? { ...d, [k]: val } : d));
   const setReward = (patch: Partial<Quest["reward"]>) => setDraft((d) => (d ? { ...d, reward: { ...d.reward, ...patch } } : d));
