@@ -13,5 +13,6 @@ export default middleware((req) => {
 });
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  // Gate everything under /admin EXCEPT the login page itself.
+  matcher: ["/admin/((?!login).*)"],
 };

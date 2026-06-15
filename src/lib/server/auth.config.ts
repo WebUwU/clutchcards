@@ -12,6 +12,9 @@ export const authConfig = {
     // Used by middleware to gate the /admin area.
     authorized({ auth, request }) {
       const { pathname } = request.nextUrl;
+      // The admin login page itself must stay public, otherwise you can never
+      // reach it to sign in.
+      if (pathname === "/admin/login") return true;
       if (pathname.startsWith("/admin")) {
         const role = (auth?.user as { role?: string } | undefined)?.role;
         return role === "admin";
