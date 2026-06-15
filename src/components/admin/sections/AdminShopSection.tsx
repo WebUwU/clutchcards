@@ -1,14 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ShopItem, ShopCategory } from "@/types";
 import { AdminTable, Column, StatusPill } from "../AdminTable";
 import { AdminFormDrawer } from "../AdminFormDrawer";
 import { Field, TextInput, NumberInput, TextArea, Select, Toggle } from "../fields";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { SectionHeader } from "./AdminCardsSection";
-import { resolveShopItems } from "@/lib/registry";
-import { getAdminShopItems, saveAdminShopItems } from "@/lib/localDb";
+import { api } from "@/lib/apiClient";
 import { uid } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 
@@ -16,35 +15,41 @@ const CATEGORIES: ShopCategory[] = ["premium_bundle", "cosmetic", "frame", "show
 
 export function AdminShopSection({ onChanged }: { onChanged: () => void }) {
   const toast = useToast();
-  const [v, setV] = useState(0);
-  const items = useMemo(() => resolveShopItems(), [v]);
+  const [items, setItems] = useState<ShopItem[]>([]);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ShopItem | null>(null);
   const [editing, setEditing] = useState(false);
   const [toDelete, setToDelete] = useState<ShopItem | null>(null);
-  const overlay = () => getAdminShopItems() ?? [];
-  const bump = () => { setV((x) => x + 1); onChanged(); };
+
+  const load = async () => {
+    try { setItems(await api.adminList("shop") as ShopItem[]); }
+    catch (e) { toast(e instanceof Error ? e.message : "Failed to load", "error"); }
+  };
+  useEffect(() => { load(); }, []);
+  const bump = () => { load(); onChanged(); };
 
   const startNew = () => {
     setEditing(false);
-    setDraft({ id: uid("s"), name: "", description: "", category: "cosmetic", image: "/images/packs/", isActive: true });
+    setDraft({ id: uid("s"), name: "", description: "", category: "cosmetic", image: "", isActive: true } as ShopItem);
     setOpen(true);
   };
   const startEdit = (i: ShopItem) => { setEditing(true); setDraft({ ...i }); setOpen(true); };
-  const save = () => {
+  const save = async () => {
     if (!draft) return;
-    saveAdminShopItems([...overlay().filter((i) => i.id !== draft.id), draft]);
-    toast(editing ? `Updated ${draft.name}` : `Created ${draft.name}`, "success");
-    setOpen(false); setDraft(null); bump();
+    try {
+      await api.adminSave("shop", { ...draft, slug: (draft as any).slug || draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") } as any);
+      toast(editing ? `Updated ${draft.name}` : `Created ${draft.name}`, "success");
+      setOpen(false); setDraft(null); bump();
+    } catch (e) { toast(e instanceof Error ? e.message : "Save failed", "error"); }
   };
-  const toggle = (i: ShopItem) => { saveAdminShopItems([...overlay().filter((x) => x.id !== i.id), { ...i, isActive: !i.isActive }]); bump(); };
-  const confirmDelete = () => {
+  const toggle = async (i: ShopItem) => {
+    try { await api.adminSave("shop", { ...i, isActive: !i.isActive } as any); bump(); }
+    catch (e) { toast(e instanceof Error ? e.message : "Toggle failed", "error"); }
+  };
+  const confirmDelete = async () => {
     if (!toDelete) return;
-    const isAdmin = overlay().some((i) => i.id === toDelete.id);
-    if (isAdmin) saveAdminShopItems(overlay().filter((i) => i.id !== toDelete.id));
-    else saveAdminShopItems([...overlay(), { ...toDelete, isActive: false }]);
-    toast(`Deleted ${toDelete.name}`, "success");
-    setToDelete(null); bump();
+    try { await api.adminDelete("shop", toDelete.id); toast(`Deleted ${toDelete.name}`, "success"); setToDelete(null); bump(); }
+    catch (e) { toast(e instanceof Error ? e.message : "Delete failed", "error"); }
   };
   const set = <K extends keyof ShopItem>(k: K, val: ShopItem[K]) => setDraft((d) => (d ? { ...d, [k]: val } : d));
 

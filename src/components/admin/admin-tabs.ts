@@ -14,8 +14,7 @@ export const ADMIN_TABS = [
   { key: "shop", label: "Shop Items", icon: ShoppingBag },
   { key: "market", label: "Market", icon: Store },
   { key: "economy", label: "Economy Rules", icon: Coins },
-  { key: "users", label: "Users Preview", icon: Users },
-  { key: "storage", label: "Storage / Import Export", icon: Database },
+  { key: "users", label: "Users", icon: Users },
   { key: "settings", label: "Settings", icon: Settings },
 ] as const;
 

@@ -1,46 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { User } from "@/types";
 import { SectionHeader } from "./AdminCardsSection";
-import { getLocalUser } from "@/lib/localDb";
-import { currentUser as seedUser } from "@/data/user";
-import { Coins, Gem, Star, Trophy } from "lucide-react";
+import { AdminTable, Column } from "../AdminTable";
+import { api } from "@/lib/apiClient";
+import { useToast } from "@/components/ui/Toast";
 import { formatNumber } from "@/lib/utils";
 
-export function AdminUsersSection() {
-  const [user, setUser] = useState<User | null>(null);
-  useEffect(() => { setUser(getLocalUser() ?? seedUser); }, []);
-  if (!user) return null;
+interface AdminUser {
+  id: string; email: string | null; role: string; username: string;
+  level: number; freeCoins: number; premiumCoins: number; cardsOwned: number;
+  riot: string | null; createdAt: string;
+}
 
-  const stats = [
-    { label: "Level", value: user.level, icon: Star },
-    { label: "XP", value: formatNumber(user.xp), icon: Trophy },
-    { label: "Free Coins", value: formatNumber(user.freeCoins), icon: Coins },
-    { label: "Premium Coins", value: formatNumber(user.premiumCoins), icon: Gem },
+export function AdminUsersSection() {
+  const toast = useToast();
+  const [users, setUsers] = useState<AdminUser[]>([]);
+
+  useEffect(() => {
+    api.adminList("users").then((u) => setUsers(u as AdminUser[]))
+      .catch((e) => toast(e instanceof Error ? e.message : "Failed to load users", "error"));
+  }, [toast]);
+
+  const columns: Column<AdminUser>[] = [
+    { key: "user", header: "User", render: (u) => (
+      <div>
+        <div className="font-medium text-white">{u.username}</div>
+        <div className="font-mono text-[10px] text-slate-500">{u.email ?? "—"}</div>
+      </div>
+    )},
+    { key: "role", header: "Role", render: (u) => (
+      <span className={`chip ${u.role === "admin" ? "bg-ascend/15 text-ascend-bright" : "bg-white/5 text-slate-400"}`}>{u.role}</span>
+    )},
+    { key: "level", header: "Level", render: (u) => <span className="font-mono text-slate-400">{u.level}</span> },
+    { key: "coins", header: "Coins", render: (u) => (
+      <span className="font-mono text-xs text-slate-400">{formatNumber(u.freeCoins)} FC · {formatNumber(u.premiumCoins)} PC</span>
+    )},
+    { key: "cards", header: "Cards", render: (u) => <span className="font-mono text-slate-400">{u.cardsOwned}</span> },
+    { key: "riot", header: "Riot", render: (u) => <span className="font-mono text-xs text-slate-500">{u.riot ?? "—"}</span> },
   ];
 
   return (
     <div>
-      <SectionHeader title="Users Preview" desc="This local demo has a single player profile (stored in your browser). A real deployment would list all server users here." />
-      <div className="panel max-w-lg p-5">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="size-12 rounded-xl bg-ink-700 bg-cover" style={{ backgroundImage: `url(${user.avatar})` }} />
-          <div>
-            <div className="font-display text-lg font-bold text-white">{user.displayName || user.username}</div>
-            <div className="text-xs text-slate-400">@{user.username} · {user.rank}</div>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {stats.map((s) => (
-            <div key={s.label} className="rounded-xl border border-white/[0.06] bg-ink-900/50 p-3">
-              <s.icon className="mb-1 size-4 text-slate-500" />
-              <div className="font-display text-lg font-bold text-white">{s.value}</div>
-              <div className="text-[11px] text-slate-500">{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <SectionHeader title="Users" count={users.length} desc="All registered players, loaded live from the database." />
+      <AdminTable rows={users} columns={columns} searchKeys={["username", "email", "riot"]} />
     </div>
   );
 }

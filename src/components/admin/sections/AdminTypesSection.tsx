@@ -1,42 +1,45 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CardTypeConfig } from "@/types";
 import { AdminTable, Column } from "../AdminTable";
 import { AdminFormDrawer } from "../AdminFormDrawer";
 import { Field, TextInput, TextArea } from "../fields";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { SectionHeader } from "./AdminCardsSection";
-import { resolveCardTypes } from "@/lib/registry";
-import { getAdminCardTypes, saveAdminCardTypes } from "@/lib/localDb";
+import { api } from "@/lib/apiClient";
 import { uid } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 
 export function AdminTypesSection({ onChanged }: { onChanged: () => void }) {
   const toast = useToast();
-  const [v, setV] = useState(0);
-  const types = useMemo(() => resolveCardTypes(), [v]);
+  const [types, setTypes] = useState<CardTypeConfig[]>([]);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<CardTypeConfig | null>(null);
   const [editing, setEditing] = useState(false);
   const [toDelete, setToDelete] = useState<CardTypeConfig | null>(null);
-  const overlay = () => getAdminCardTypes() ?? [];
-  const bump = () => { setV((x) => x + 1); onChanged(); };
+
+  const load = async () => {
+    try { setTypes(await api.adminList("types") as CardTypeConfig[]); }
+    catch (e) { toast(e instanceof Error ? e.message : "Failed to load", "error"); }
+  };
+  useEffect(() => { load(); }, []);
+  const bump = () => { load(); onChanged(); };
 
   const startNew = () => { setEditing(false); setDraft({ id: uid("type"), name: "", description: "", icon: "Shapes", color: "#3ea6ff" }); setOpen(true); };
   const startEdit = (t: CardTypeConfig) => { setEditing(true); setDraft({ ...t }); setOpen(true); };
-  const save = () => {
+  const save = async () => {
     if (!draft) return;
-    saveAdminCardTypes([...overlay().filter((t) => t.id !== draft.id), draft]);
-    toast(editing ? `Updated ${draft.name}` : `Created ${draft.name}`, "success");
-    setOpen(false); setDraft(null); bump();
+    try {
+      await api.adminSave("types", draft as any);
+      toast(editing ? `Updated ${draft.name}` : `Created ${draft.name}`, "success");
+      setOpen(false); setDraft(null); bump();
+    } catch (e) { toast(e instanceof Error ? e.message : "Save failed", "error"); }
   };
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!toDelete) return;
-    const isAdmin = overlay().some((t) => t.id === toDelete.id);
-    if (isAdmin) saveAdminCardTypes(overlay().filter((t) => t.id !== toDelete.id));
-    else toast("Seed types can't be deleted, only overridden.", "info");
-    setToDelete(null); bump();
+    try { await api.adminDelete("types", toDelete.id); toast(`Deleted ${toDelete.name}`, "success"); setToDelete(null); bump(); }
+    catch (e) { toast(e instanceof Error ? e.message : "Can't delete — it may be in use by cards.", "error"); setToDelete(null); }
   };
   const set = <K extends keyof CardTypeConfig>(k: K, val: CardTypeConfig[K]) => setDraft((d) => (d ? { ...d, [k]: val } : d));
 

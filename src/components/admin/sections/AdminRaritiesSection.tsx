@@ -1,27 +1,30 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { RarityConfig } from "@/types";
 import { AdminTable, Column } from "../AdminTable";
 import { AdminFormDrawer } from "../AdminFormDrawer";
 import { Field, TextInput, NumberInput } from "../fields";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { SectionHeader } from "./AdminCardsSection";
-import { resolveRarities } from "@/lib/registry";
-import { getAdminRarities, saveAdminRarities } from "@/lib/localDb";
+import { api } from "@/lib/apiClient";
 import { uid } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 
 export function AdminRaritiesSection({ onChanged }: { onChanged: () => void }) {
   const toast = useToast();
-  const [v, setV] = useState(0);
-  const rarities = useMemo(() => resolveRarities(), [v]);
+  const [rarities, setRarities] = useState<RarityConfig[]>([]);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<RarityConfig | null>(null);
   const [editing, setEditing] = useState(false);
   const [toDelete, setToDelete] = useState<RarityConfig | null>(null);
-  const overlay = () => getAdminRarities() ?? [];
-  const bump = () => { setV((x) => x + 1); onChanged(); };
+
+  const load = async () => {
+    try { setRarities(await api.adminList("rarities") as RarityConfig[]); }
+    catch (e) { toast(e instanceof Error ? e.message : "Failed to load", "error"); }
+  };
+  useEffect(() => { load(); }, []);
+  const bump = () => { load(); onChanged(); };
 
   const startNew = () => {
     setEditing(false);
@@ -30,19 +33,18 @@ export function AdminRaritiesSection({ onChanged }: { onChanged: () => void }) {
   };
   const startEdit = (r: RarityConfig) => { setEditing(true); setDraft({ ...r }); setOpen(true); };
 
-  const save = () => {
+  const save = async () => {
     if (!draft) return;
-    const list = overlay().filter((r) => r.id !== draft.id);
-    saveAdminRarities([...list, draft]);
-    toast(editing ? `Updated ${draft.name}` : `Created ${draft.name}`, "success");
-    setOpen(false); setDraft(null); bump();
+    try {
+      await api.adminSave("rarities", draft as any);
+      toast(editing ? `Updated ${draft.name}` : `Created ${draft.name}`, "success");
+      setOpen(false); setDraft(null); bump();
+    } catch (e) { toast(e instanceof Error ? e.message : "Save failed", "error"); }
   };
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!toDelete) return;
-    const isAdmin = overlay().some((r) => r.id === toDelete.id);
-    if (isAdmin) saveAdminRarities(overlay().filter((r) => r.id !== toDelete.id));
-    else toast("Seed rarities can't be deleted, only overridden.", "info");
-    setToDelete(null); bump();
+    try { await api.adminDelete("rarities", toDelete.id); toast(`Deleted ${toDelete.name}`, "success"); setToDelete(null); bump(); }
+    catch (e) { toast(e instanceof Error ? e.message : "Can't delete — it may be in use by cards.", "error"); setToDelete(null); }
   };
   const set = <K extends keyof RarityConfig>(k: K, val: RarityConfig[K]) => setDraft((d) => (d ? { ...d, [k]: val } : d));
 

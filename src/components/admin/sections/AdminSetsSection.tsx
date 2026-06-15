@@ -1,30 +1,35 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { CardSet } from "@/types";
 import { AdminTable, Column, StatusPill } from "../AdminTable";
 import { AdminFormDrawer } from "../AdminFormDrawer";
 import { Field, TextInput, NumberInput, TextArea, Toggle } from "../fields";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { SectionHeader } from "./AdminCardsSection";
-import { resolveCardSets } from "@/lib/registry";
-import { getAdminCardSets, saveAdminCardSets } from "@/lib/localDb";
+import { api } from "@/lib/apiClient";
 import { slugify, uid } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 
-function persist(next: CardSet[]) { saveAdminCardSets(next); }
+// DB stores releaseDate as DateTime; the form uses a YYYY-MM-DD string.
+function fromDb(s: any): CardSet {
+  return { ...s, releaseDate: s.releaseDate ? String(s.releaseDate).slice(0, 10) : "" };
+}
 
 export function AdminSetsSection({ onChanged }: { onChanged: () => void }) {
   const toast = useToast();
-  const [v, setV] = useState(0);
-  const sets = useMemo(() => resolveCardSets(), [v]);
+  const [sets, setSets] = useState<CardSet[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CardSet | null>(null);
   const [draft, setDraft] = useState<CardSet | null>(null);
   const [toDelete, setToDelete] = useState<CardSet | null>(null);
-  const bump = () => { setV((x) => x + 1); onChanged(); };
 
-  const overlay = () => getAdminCardSets() ?? [];
+  const load = async () => {
+    try { setSets((await api.adminList("sets") as any[]).map(fromDb)); }
+    catch (e) { toast(e instanceof Error ? e.message : "Failed to load", "error"); }
+  };
+  useEffect(() => { load(); }, []);
+  const bump = () => { load(); onChanged(); };
 
   const startNew = () => {
     setEditing(null);
@@ -38,28 +43,28 @@ export function AdminSetsSection({ onChanged }: { onChanged: () => void }) {
 
   const startEdit = (s: CardSet) => { setEditing(s); setDraft({ ...s }); setOpen(true); };
 
-  const save = () => {
+  const save = async () => {
     if (!draft) return;
-    const final = { ...draft, slug: draft.slug || slugify(draft.name) };
-    const list = overlay().filter((s) => s.id !== final.id);
-    persist([...list, final]);
-    toast(editing ? `Updated ${final.name}` : `Created ${final.name}`, "success");
-    setOpen(false); setDraft(null); bump();
+    const payload = {
+      ...draft, slug: draft.slug || slugify(draft.name),
+      releaseDate: new Date(draft.releaseDate || Date.now()).toISOString(),
+    };
+    try {
+      await api.adminSave("sets", payload as any);
+      toast(editing ? `Updated ${draft.name}` : `Created ${draft.name}`, "success");
+      setOpen(false); setDraft(null); bump();
+    } catch (e) { toast(e instanceof Error ? e.message : "Save failed", "error"); }
   };
 
-  const toggle = (s: CardSet) => {
-    const list = overlay().filter((x) => x.id !== s.id);
-    persist([...list, { ...s, isActive: !s.isActive }]);
-    bump();
+  const toggle = async (s: CardSet) => {
+    try { await api.adminSave("sets", { ...s, isActive: !s.isActive, releaseDate: new Date(s.releaseDate || Date.now()).toISOString() } as any); bump(); }
+    catch (e) { toast(e instanceof Error ? e.message : "Toggle failed", "error"); }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!toDelete) return;
-    const isAdmin = overlay().some((s) => s.id === toDelete.id);
-    if (isAdmin) persist(overlay().filter((s) => s.id !== toDelete.id));
-    else persist([...overlay(), { ...toDelete, isActive: false }]);
-    toast(`Deleted ${toDelete.name}`, "success");
-    setToDelete(null); bump();
+    try { await api.adminDelete("sets", toDelete.id); toast(`Deleted ${toDelete.name}`, "success"); setToDelete(null); bump(); }
+    catch (e) { toast(e instanceof Error ? e.message : "Delete failed", "error"); }
   };
 
   const set = <K extends keyof CardSet>(k: K, val: CardSet[K]) => setDraft((d) => (d ? { ...d, [k]: val } : d));

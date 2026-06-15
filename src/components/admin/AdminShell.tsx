@@ -15,7 +15,6 @@ import { AdminShopSection } from "./sections/AdminShopSection";
 import { AdminMarketSection } from "./sections/AdminMarketSection";
 import { AdminEconomySection } from "./sections/AdminEconomySection";
 import { AdminUsersSection } from "./sections/AdminUsersSection";
-import { AdminStorageSection } from "./sections/AdminStorageSection";
 import { AdminSettingsSection } from "./sections/AdminSettingsSection";
 
 export function AdminShell() {
@@ -41,9 +40,8 @@ export function AdminShell() {
             {tab === "quests" && <AdminQuestsSection onChanged={onChanged} />}
             {tab === "shop" && <AdminShopSection onChanged={onChanged} />}
             {tab === "market" && <AdminMarketSection onChanged={onChanged} />}
-            {tab === "economy" && <AdminEconomySection onChanged={onChanged} />}
+            {tab === "economy" && <AdminEconomySection />}
             {tab === "users" && <AdminUsersSection />}
-            {tab === "storage" && <AdminStorageSection onChanged={onChanged} />}
             {tab === "settings" && <AdminSettingsSection />}
           </div>
         </main>

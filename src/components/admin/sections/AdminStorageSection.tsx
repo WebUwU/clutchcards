@@ -1,65 +1,64 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { SectionHeader } from "./AdminCardsSection";
-import { JsonPreview } from "../JsonPreview";
 import { ConfirmDialog } from "../ConfirmDialog";
-import { exportLocalDbAsJson, importLocalDbFromJson, resetLocalDb, getStorageStatus } from "@/lib/localDb";
+import { api } from "@/lib/apiClient";
 import { useToast } from "@/components/ui/Toast";
-import { Download, Upload, RotateCcw, HardDrive } from "lucide-react";
+import { Database, RotateCcw, ScrollText } from "lucide-react";
 
-export function AdminStorageSection({ onChanged }: { onChanged: () => void }) {
+// DB-backed ops: view recent audit log + a guarded gameplay reset.
+export function AdminStorageSection() {
   const toast = useToast();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [json, setJson] = useState("");
-  const [status, setStatus] = useState({ available: false, keys: 0, bytes: 0 });
-  const [confirmReset, setConfirmReset] = useState(false);
+  const [audit, setAudit] = useState<any[]>([]);
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const refresh = () => { setJson(exportLocalDbAsJson()); setStatus(getStorageStatus()); };
-  useEffect(refresh, []);
+  const load = () => api.adminAudit().then(setAudit).catch(() => setAudit([]));
+  useEffect(() => { load(); }, []);
 
-  const download = () => {
-    const blob = new Blob([exportLocalDbAsJson()], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `ascendant-cards-export-${Date.now()}.json`;
-    a.click(); URL.revokeObjectURL(url);
-    toast("Exported data", "success");
-  };
-
-  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const res = importLocalDbFromJson(text);
-    if (res.ok) { toast("Import successful", "success"); refresh(); onChanged(); }
-    else toast(res.error ?? "Import failed", "error");
-    if (fileRef.current) fileRef.current.value = "";
-  };
-
-  const doReset = () => {
-    resetLocalDb();
-    toast("Local data reset", "success");
-    setConfirmReset(false); refresh(); onChanged();
+  const doReset = async () => {
+    setBusy(true);
+    try {
+      await fetch("/api/admin/reset", { method: "POST" });
+      toast("Gameplay state reset (inventories, market, quests cleared).", "success");
+      setConfirm(false); load();
+    } catch { toast("Reset failed", "error"); }
+    finally { setBusy(false); }
   };
 
   return (
-    <div className="max-w-2xl">
-      <SectionHeader title="Storage / Import · Export" desc="Back up, restore or reset all locally stored data (user, collection, admin entities, economy)." />
-      <div className="mb-4 flex flex-wrap gap-2">
-        <button onClick={download} className="btn-cyan px-4 py-2 text-sm"><Download className="size-4" /> Export JSON</button>
-        <button onClick={() => fileRef.current?.click()} className="btn-ghost px-4 py-2 text-sm"><Upload className="size-4" /> Import JSON</button>
-        <button onClick={() => setConfirmReset(true)} className="btn-primary px-4 py-2 text-sm"><RotateCcw className="size-4" /> Reset local DB</button>
-        <input ref={fileRef} type="file" accept="application/json" onChange={onFile} className="hidden" />
+    <div>
+      <SectionHeader title="Data & Logs" desc="Database operations and the admin audit trail. The catalog (cards, packs, etc.) is stored in your Postgres database." />
+
+      <div className="mb-6 grid gap-4 sm:grid-cols-2">
+        <div className="panel p-5">
+          <div className="flex items-center gap-2 text-tactical"><Database className="size-4" /><span className="font-display font-bold text-white">Storage</span></div>
+          <p className="mt-1 text-sm text-slate-400">All content lives in your Postgres database. No browser storage is used in production.</p>
+        </div>
+        <div className="panel p-5">
+          <div className="flex items-center gap-2 text-ascend-bright"><RotateCcw className="size-4" /><span className="font-display font-bold text-white">Reset gameplay</span></div>
+          <p className="mt-1 text-sm text-slate-400">Clears inventories, listings, quest progress and synced matches. Keeps the catalog and users.</p>
+          <button onClick={() => setConfirm(true)} className="btn-ghost mt-3 px-3 py-1.5 text-xs text-ascend-bright">Reset gameplay state</button>
+        </div>
       </div>
-      <div className="mb-4 flex items-center gap-2 rounded-xl border border-white/[0.06] bg-ink-900/50 px-4 py-3 text-sm text-slate-400">
-        <HardDrive className="size-4 text-slate-500" />
-        {status.available
-          ? <span>{status.keys} keys · ~{(status.bytes / 1024).toFixed(1)} KB stored in this browser.</span>
-          : <span>Local storage is not available in this context.</span>}
+
+      <div className="panel p-5">
+        <div className="mb-3 flex items-center gap-2"><ScrollText className="size-4 text-slate-400" /><span className="font-display font-bold text-white">Audit log</span><span className="rounded bg-white/5 px-2 py-0.5 font-mono text-[11px] text-slate-400">{audit.length}</span></div>
+        <div className="max-h-80 space-y-1 overflow-y-auto">
+          {audit.length === 0 ? (
+            <p className="text-sm text-slate-500">No admin actions logged yet.</p>
+          ) : audit.map((l) => (
+            <div key={l.id} className="flex items-center justify-between gap-3 rounded-lg bg-ink-900/50 px-3 py-2 font-mono text-[11px]">
+              <span className="text-tactical">{l.action}</span>
+              <span className="truncate text-slate-500">{l.target}</span>
+              <span className="shrink-0 text-slate-600">{new Date(l.createdAt).toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
       </div>
-      <JsonPreview json={json} maxHeight={420} />
-      <ConfirmDialog open={confirmReset} title="Reset local database" message="This permanently clears all locally stored data and restores the original seed content. This cannot be undone." confirmLabel="Reset everything" destructive onConfirm={doReset} onCancel={() => setConfirmReset(false)} />
+
+      <ConfirmDialog open={confirm} title="Reset gameplay state" message="This clears all inventories, market listings, quest progress and synced matches for every user. The catalog and accounts stay. Continue?" confirmLabel={busy ? "Resetting…" : "Reset"} destructive onConfirm={doReset} onCancel={() => setConfirm(false)} />
     </div>
   );
 }

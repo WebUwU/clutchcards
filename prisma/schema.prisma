@@ -162,6 +162,22 @@ model Card {
   listings  MarketListing[]
 }
 
+model ShopItem {
+  id              String  @id
+  name            String
+  slug            String  @unique
+  description     String  @default("")
+  category        String  @default("cosmetic")
+  image           String  @default("")
+  pricePremium    Int?
+  priceReal       Float?
+  grantsPremium   Int?
+  badge           String  @default("")
+  isActive        Boolean @default(true)
+  sortOrder       Int     @default(0)
+  createdAt       DateTime @default(now())
+}
+
 model Pack {
   id               String  @id
   name             String

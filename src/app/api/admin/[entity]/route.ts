@@ -20,6 +20,7 @@ function model(entity: string) {
     case "types": return prisma.cardType;
     case "packs": return prisma.pack;
     case "quests": return prisma.quest;
+    case "shop": return prisma.shopItem;
     default: return null;
   }
 }

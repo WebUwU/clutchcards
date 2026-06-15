@@ -1,30 +1,37 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Pack, PackDropTableEntry } from "@/types";
 import { AdminTable, Column, StatusPill } from "../AdminTable";
 import { AdminFormDrawer } from "../AdminFormDrawer";
 import { Field, TextInput, NumberInput, TextArea, Select, Toggle } from "../fields";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { SectionHeader } from "./AdminCardsSection";
-import { resolvePacks, resolveCardSets, resolveRarities } from "@/lib/registry";
-import { getAdminPacks, saveAdminPacks } from "@/lib/localDb";
+import { api } from "@/lib/apiClient";
 import { slugify, uid } from "@/lib/utils";
 import { useToast } from "@/components/ui/Toast";
 import { Trash2, Plus } from "lucide-react";
 
 export function AdminPacksSection({ onChanged }: { onChanged: () => void }) {
   const toast = useToast();
-  const [v, setV] = useState(0);
-  const packs = useMemo(() => resolvePacks(), [v]);
-  const sets = useMemo(() => resolveCardSets(), [v]);
-  const rarities = useMemo(() => resolveRarities(), [v]);
+  const [packs, setPacks] = useState<Pack[]>([]);
+  const [sets, setSets] = useState<any[]>([]);
+  const [rarities, setRarities] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Pack | null>(null);
   const [editing, setEditing] = useState(false);
   const [toDelete, setToDelete] = useState<Pack | null>(null);
-  const overlay = () => getAdminPacks() ?? [];
-  const bump = () => { setV((x) => x + 1); onChanged(); };
+
+  const load = async () => {
+    try {
+      const [p, s, r] = await Promise.all([api.adminList("packs"), api.adminList("sets"), api.adminList("rarities")]);
+      // Ensure arrays are arrays (API decodes JSON fields already).
+      setPacks((p as any[]).map((x) => ({ ...x, allowedSetIds: x.allowedSetIds ?? [], dropTable: x.dropTable ?? [] })) as Pack[]);
+      setSets(s); setRarities(r);
+    } catch (e) { toast(e instanceof Error ? e.message : "Failed to load", "error"); }
+  };
+  useEffect(() => { load(); }, []);
+  const bump = () => { load(); onChanged(); };
 
   const startNew = () => {
     setEditing(false);
@@ -39,21 +46,30 @@ export function AdminPacksSection({ onChanged }: { onChanged: () => void }) {
   };
   const startEdit = (p: Pack) => { setEditing(true); setDraft({ ...p, dropTable: [...p.dropTable], allowedSetIds: [...p.allowedSetIds] }); setOpen(true); };
 
-  const save = () => {
+  const save = async () => {
     if (!draft) return;
-    const final = { ...draft, slug: draft.slug || slugify(draft.name), isPremium: draft.pricePremiumCoins > 0 };
-    saveAdminPacks([...overlay().filter((p) => p.id !== final.id), final]);
-    toast(editing ? `Updated ${final.name}` : `Created ${final.name}`, "success");
-    setOpen(false); setDraft(null); bump();
+    const payload = {
+      id: draft.id, name: draft.name, slug: draft.slug || slugify(draft.name),
+      description: draft.description, image: draft.image,
+      priceFreeCoins: draft.priceFreeCoins, pricePremiumCoins: draft.pricePremiumCoins,
+      allowedSetIds: draft.allowedSetIds, dropTable: draft.dropTable,
+      guaranteedRarity: draft.guaranteedRarity ?? null, cardCount: draft.cardCount,
+      isPremium: draft.pricePremiumCoins > 0, isActive: draft.isActive,
+    };
+    try {
+      await api.adminSave("packs", payload as any);
+      toast(editing ? `Updated ${draft.name}` : `Created ${draft.name}`, "success");
+      setOpen(false); setDraft(null); bump();
+    } catch (e) { toast(e instanceof Error ? e.message : "Save failed", "error"); }
   };
-  const toggle = (p: Pack) => { saveAdminPacks([...overlay().filter((x) => x.id !== p.id), { ...p, isActive: !p.isActive }]); bump(); };
-  const confirmDelete = () => {
+  const toggle = async (p: Pack) => {
+    try { await api.adminSave("packs", { ...p, guaranteedRarity: p.guaranteedRarity ?? null, isActive: !p.isActive } as any); bump(); }
+    catch (e) { toast(e instanceof Error ? e.message : "Toggle failed", "error"); }
+  };
+  const confirmDelete = async () => {
     if (!toDelete) return;
-    const isAdmin = overlay().some((p) => p.id === toDelete.id);
-    if (isAdmin) saveAdminPacks(overlay().filter((p) => p.id !== toDelete.id));
-    else saveAdminPacks([...overlay(), { ...toDelete, isActive: false }]);
-    toast(`Deleted ${toDelete.name}`, "success");
-    setToDelete(null); bump();
+    try { await api.adminDelete("packs", toDelete.id); toast(`Deleted ${toDelete.name}`, "success"); setToDelete(null); bump(); }
+    catch (e) { toast(e instanceof Error ? e.message : "Delete failed", "error"); setToDelete(null); }
   };
   const set = <K extends keyof Pack>(k: K, val: Pack[K]) => setDraft((d) => (d ? { ...d, [k]: val } : d));
 

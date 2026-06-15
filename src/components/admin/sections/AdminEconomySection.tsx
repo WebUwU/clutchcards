@@ -1,39 +1,41 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { EconomyConfig } from "@/types";
-import { Field, NumberInput } from "../fields";
+import { useEffect, useState } from "react";
 import { SectionHeader } from "./AdminCardsSection";
-import { resolveEconomyConfig } from "@/lib/registry";
-import { saveEconomyConfig } from "@/lib/localDb";
 import { useToast } from "@/components/ui/Toast";
 import { ShieldCheck, Lock } from "lucide-react";
 
-export function AdminEconomySection({ onChanged }: { onChanged: () => void }) {
+// Read-only view of the live, server-enforced economy values. These are
+// enforced in code (economy.server.ts) — the source of truth for the
+// closed economy — so they're shown here for transparency, not editing.
+export function AdminEconomySection() {
   const toast = useToast();
-  const [v, setV] = useState(0);
-  const initial = useMemo(() => resolveEconomyConfig(), [v]);
-  const [cfg, setCfg] = useState<EconomyConfig>(initial);
-  const set = <K extends keyof EconomyConfig>(k: K, val: EconomyConfig[K]) => setCfg((c) => ({ ...c, [k]: val }));
+  const [cfg, setCfg] = useState<any>(null);
 
-  const save = () => {
-    saveEconomyConfig({ ...cfg, allowFreeToPremium: false, allowCashout: false });
-    toast("Economy config saved", "success");
-    setV((x) => x + 1); onChanged();
-  };
+  useEffect(() => {
+    fetch("/api/admin/economy").then((r) => r.json()).then((j) => setCfg(j.data)).catch(() => {});
+  }, []);
+
+  const rows = cfg ? [
+    { label: "Market fee rate", value: `${Math.round(cfg.marketFeeRate * 100)}%` },
+    { label: "Listing flat fee", value: `${cfg.listingFeeFlat} PC` },
+    { label: "Premium → Free rate", value: `1 PC = ${cfg.premiumToFreeRate} FC` },
+  ] : [];
 
   return (
     <div className="max-w-lg">
-      <SectionHeader title="Economy Rules" desc="Tune fees and conversion rates. The closed-economy invariants below are permanently locked." />
+      <SectionHeader title="Economy Rules" desc="Live, server-enforced economy values. These are defined in code as the single source of truth for the closed economy." />
       <div className="panel p-5">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Market fee rate" hint="0–1 (e.g. 0.1 = 10%)"><NumberInput value={cfg.marketFeeRate} onChange={(x) => set("marketFeeRate", x)} min={0} step={0.01} /></Field>
-          <Field label="Listing flat fee (PC)"><NumberInput value={cfg.listingFeeFlat} onChange={(x) => set("listingFeeFlat", x)} min={0} /></Field>
-          <Field label="Premium → Free rate" hint="1 PC = N FC"><NumberInput value={cfg.premiumToFreeRate} onChange={(x) => set("premiumToFreeRate", x)} min={1} /></Field>
-          <Field label="Fusion base cost (FC)"><NumberInput value={cfg.fusionBaseCost} onChange={(x) => set("fusionBaseCost", x)} min={0} /></Field>
-          <Field label="Fusion per extra card (FC)"><NumberInput value={cfg.fusionPerExtraCard} onChange={(x) => set("fusionPerExtraCard", x)} min={0} /></Field>
-        </div>
-        <button onClick={save} className="btn-primary mt-2 w-full">Save economy config</button>
+        {cfg ? (
+          <div className="space-y-2">
+            {rows.map((r) => (
+              <div key={r.label} className="flex items-center justify-between rounded-lg bg-ink-900/50 px-3 py-2.5">
+                <span className="text-sm text-slate-300">{r.label}</span>
+                <span className="font-mono text-sm font-semibold text-white">{r.value}</span>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-sm text-slate-500">Loading…</p>}
       </div>
 
       <div className="mt-4 space-y-2">
