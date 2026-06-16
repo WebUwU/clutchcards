@@ -14,7 +14,7 @@ import { QuestCard } from "@/components/quests/QuestCard";
 import { useToast } from "@/components/ui/Toast";
 import { useGameData } from "@/components/providers/GameDataProvider";
 import { api } from "@/lib/apiClient";
-import { getXpForNextLevel } from "@/lib/economy";
+import { levelStateFromTotalXp } from "@/lib/economy";
 import { formatNumber } from "@/lib/utils";
 
 export default function DashboardPage() {
@@ -69,7 +69,7 @@ export default function DashboardPage() {
               <div className="mt-4 flex items-center gap-2 rounded-xl bg-ink-900/60 px-4 py-3">
                 <Package className="size-5 text-tactical" />
                 <span className="text-sm text-slate-300">
-                  <span className="font-mono text-slate-400">{formatNumber(Math.max(0, getXpForNextLevel(profile.level) - profile.xp))} XP</span> to the next level
+                  <span className="font-mono text-slate-400">{formatNumber((() => { const s = levelStateFromTotalXp(profile.xp); return Math.max(0, s.xpForLevel - s.xpIntoLevel); })())} XP</span> to the next level
                 </span>
               </div>
             </motion.div>

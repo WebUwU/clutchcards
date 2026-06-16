@@ -90,6 +90,33 @@ export function getXpForNextLevel(level: number): number {
   return Math.round(500 + level * 120 + Math.pow(level, 1.6) * 18);
 }
 
+// Derive level + progress from a single cumulative XP total. This is the
+// source of truth so `level` and `xp` can never drift apart. Walks up the
+// per-level costs, subtracting until the remainder fits inside a level.
+export function levelStateFromTotalXp(totalXp: number): {
+  level: number;
+  xpIntoLevel: number;
+  xpForLevel: number;
+  progress: number;
+} {
+  let level = 1;
+  let remaining = Math.max(0, Math.floor(totalXp));
+  // Safety cap to avoid any chance of an infinite loop.
+  while (level < 999) {
+    const need = getXpForNextLevel(level);
+    if (remaining < need) break;
+    remaining -= need;
+    level += 1;
+  }
+  const xpForLevel = getXpForNextLevel(level);
+  return {
+    level,
+    xpIntoLevel: remaining,
+    xpForLevel,
+    progress: xpForLevel > 0 ? Math.min(1, remaining / xpForLevel) : 0,
+  };
+}
+
 export function calculateLevelProgress(xpIntoLevel: number, level: number): number {
   const needed = getXpForNextLevel(level);
   if (needed <= 0) return 0;

@@ -34,6 +34,14 @@ export async function GET() {
     });
   }
 
+  // Keep the stored level in sync with cumulative XP (single source of truth),
+  // so the displayed level can never drift from XP.
+  const { levelStateFromTotalXp } = await import("@/lib/economy");
+  const derived = levelStateFromTotalXp(profile.xp);
+  if (derived.level !== profile.level) {
+    profile = await prisma.profile.update({ where: { userId: u.userId }, data: { level: derived.level } });
+  }
+
   const valorant = await prisma.valorantAccount.findUnique({ where: { userId: u.userId } });
   return ok({
     profile: { ...profile, showcaseCardIds: profile.showcaseCardIds },

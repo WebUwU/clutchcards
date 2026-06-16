@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { getXpForNextLevel, calculateLevelProgress } from "@/lib/economy";
+import { levelStateFromTotalXp } from "@/lib/economy";
 import { formatNumber } from "@/lib/utils";
 
 export function XPBar({
@@ -13,15 +13,15 @@ export function XPBar({
   xp: number;
   showLabels?: boolean;
 }) {
-  const needed = getXpForNextLevel(level);
-  const progress = calculateLevelProgress(xp, level);
+  // `xp` is the cumulative total — derive the real level + progress from it.
+  const { level: derivedLevel, xpIntoLevel, xpForLevel, progress } = levelStateFromTotalXp(xp);
   return (
     <div className="w-full">
       {showLabels && (
         <div className="mb-1.5 flex items-center justify-between text-xs">
-          <span className="font-mono text-slate-400">LVL {level}</span>
+          <span className="font-mono text-slate-400">LVL {derivedLevel}</span>
           <span className="font-mono text-slate-500">
-            {formatNumber(xp)} / {formatNumber(needed)} XP
+            {formatNumber(xpIntoLevel)} / {formatNumber(xpForLevel)} XP
           </span>
         </div>
       )}
