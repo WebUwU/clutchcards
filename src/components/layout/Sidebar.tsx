@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { navItems } from "./nav-items";
 import { cn } from "@/lib/utils";
 import { ShieldHalf } from "lucide-react";
+import { SidebarMatchSync } from "@/components/valorant/MatchSyncButton";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -54,6 +55,7 @@ export function Sidebar() {
       </nav>
 
       <div className="mt-auto space-y-3 px-2 pt-4">
+        {loggedIn && <SidebarMatchSync />}
         {isAdmin && (
           <Link href="/admin" className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-slate-500 transition-colors hover:text-slate-300">
             <ShieldHalf className="size-3.5" /> Admin
